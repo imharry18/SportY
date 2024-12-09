@@ -1,7 +1,7 @@
 'use client';
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { Shield, Users, Eye, Settings, Edit, ArrowRight, X, Lock } from 'lucide-react';
+import { Shield, Users, Eye, Settings, Edit, ArrowRight, X, Lock, Zap, Terminal } from 'lucide-react';
 
 export default function JoinAuction() {
   const router = useRouter();
@@ -51,88 +51,195 @@ export default function JoinAuction() {
   }
 
   return (
-    <div className="min-h-screen w-full bg-[#020202] flex flex-col items-center py-20 px-6 relative overflow-hidden">
-      <div className="absolute inset-0 bg-grid-pattern opacity-[0.03] animate-pulse pointer-events-none"></div>
+    <div className="min-h-[calc(100vh-5rem)] w-full bg-[#050505] flex flex-col items-center justify-center py-12 px-6 relative overflow-hidden">
+      
+      {/* --- BACKGROUND FX --- */}
+      <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none"></div>
+      <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-brand/5 blur-[150px] rounded-full pointer-events-none mix-blend-screen"></div>
+      <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-900/10 blur-[150px] rounded-full pointer-events-none mix-blend-screen"></div>
+      <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] pointer-events-none animate-pulse"></div>
 
-      <div className="text-center mb-12 relative z-10">
-        <h1 className="text-6xl font-tech font-bold text-white uppercase tracking-tight">Main <span className="text-brand">Lobby</span></h1>
-      </div>
+      {/* --- CONTENT CONTAINER --- */}
+      <div className="max-w-5xl w-full relative z-10 flex flex-col items-center">
 
-      {/* --- TOP: CONFIGURATION ZONE --- */}
-      <div className="flex gap-4 mb-16 relative z-10 w-full max-w-4xl">
-        
-        {/* SETUP BUTTON */}
-        <button 
-            onClick={() => openModal('SETUP')}
-            className="flex-1 group flex flex-col items-center justify-center p-8 bg-white/[0.03] border border-white/10 hover:border-brand/50 rounded-2xl transition-all hover:bg-white/[0.05]"
-        >
-            <div className="mb-4 p-3 bg-brand/10 rounded-full text-brand group-hover:scale-110 transition-transform">
-                <Settings className="w-8 h-8" />
+        {/* HEADER */}
+        <div className="text-center mb-16 animate-in fade-in slide-in-from-top-4 duration-700">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 mb-6 backdrop-blur-md">
+                <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
+                <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Gateway v4.1</span>
             </div>
-            <h3 className="text-xl font-tech font-bold text-white uppercase tracking-wider">Setup Auction</h3>
-            <p className="text-xs text-white/40 font-mono mt-2">Initialize Teams & Rules</p>
-        </button>
+            <h1 className="text-5xl md:text-7xl font-tech font-bold text-white uppercase tracking-tighter leading-none mb-4">
+                System <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-brand-glow">Access.</span>
+            </h1>
+            <p className="text-white/40 font-clean text-sm max-w-md mx-auto">
+                Secure entry point for Auction Admins, Franchise Owners, and Spectators. Select your protocol.
+            </p>
+        </div>
 
-        {/* EDIT BUTTON */}
-        <button 
-            onClick={() => openModal('EDIT')}
-            className="flex-1 group flex flex-col items-center justify-center p-8 bg-white/[0.03] border border-white/10 hover:border-cyan-400/50 rounded-2xl transition-all hover:bg-white/[0.05]"
-        >
-            <div className="mb-4 p-3 bg-cyan-500/10 rounded-full text-cyan-400 group-hover:scale-110 transition-transform">
-                <Edit className="w-8 h-8" />
-            </div>
-            <h3 className="text-xl font-tech font-bold text-white uppercase tracking-wider">Edit Config</h3>
-            <p className="text-xs text-white/40 font-mono mt-2">Modify Existing Params</p>
-        </button>
-      </div>
-
-      {/* --- BOTTOM: JOIN ROLES --- */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 max-w-6xl w-full relative z-10">
-        <RoleCard icon={Shield} title="Admin" color="text-brand" onClick={() => openModal('ADMIN')} />
-        <RoleCard icon={Users} title="Team" color="text-cyan-400" onClick={() => openModal('TEAM')} />
-        <RoleCard icon={Eye} title="Spectator" color="text-yellow-400" onClick={() => openModal('SPECTATOR')} />
-      </div>
-
-      {/* --- UNIVERSAL MODAL --- */}
-      {activeModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/90 backdrop-blur-md animate-in fade-in duration-200">
-            <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl p-8 w-full max-w-md relative shadow-2xl">
-                <button onClick={() => setActiveModal(null)} className="absolute top-4 right-4 text-white/20 hover:text-white"><X className="w-6 h-6" /></button>
+        {/* --- MAIN GRID --- */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full mb-12">
+            
+            {/* LEFT: ADMIN TOOLS (4 Cols) */}
+            <div className="lg:col-span-4 flex flex-col gap-4 animate-in slide-in-from-left-4 duration-700 delay-100">
+                <p className="text-[10px] font-bold text-brand uppercase tracking-widest mb-1 pl-1">Configuration</p>
                 
-                <div className="mb-6">
-                    <h3 className="text-2xl font-tech font-bold text-white uppercase mb-1">Access: <span className="text-brand">{activeModal}</span></h3>
-                    <p className="text-xs text-white/40 font-mono">SECURE_GATEWAY_V3</p>
+                {/* SETUP BTN */}
+                <button 
+                    onClick={() => openModal('SETUP')}
+                    className="group relative h-32 w-full bg-[#0a0a0a] border border-white/10 hover:border-brand/50 rounded-2xl overflow-hidden transition-all text-left p-6"
+                >
+                    <div className="absolute inset-0 bg-brand/5 scale-0 group-hover:scale-100 transition-transform duration-500 origin-center rounded-2xl"></div>
+                    <div className="relative z-10 flex flex-col justify-between h-full">
+                        <div className="flex justify-between items-start">
+                            <Settings className="w-6 h-6 text-white/40 group-hover:text-brand transition-colors" />
+                            <ArrowRight className="w-4 h-4 text-white/20 group-hover:text-white -translate-x-2 group-hover:translate-x-0 transition-all opacity-0 group-hover:opacity-100" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-tech font-bold text-white uppercase tracking-wide">Initialize</h3>
+                            <p className="text-[10px] font-mono text-white/40">Run New Setup</p>
+                        </div>
+                    </div>
+                </button>
+
+                {/* EDIT BTN */}
+                <button 
+                    onClick={() => openModal('EDIT')}
+                    className="group relative h-32 w-full bg-[#0a0a0a] border border-white/10 hover:border-blue-500/50 rounded-2xl overflow-hidden transition-all text-left p-6"
+                >
+                    <div className="absolute inset-0 bg-blue-500/5 scale-0 group-hover:scale-100 transition-transform duration-500 origin-center rounded-2xl"></div>
+                    <div className="relative z-10 flex flex-col justify-between h-full">
+                        <div className="flex justify-between items-start">
+                            <Edit className="w-6 h-6 text-white/40 group-hover:text-blue-400 transition-colors" />
+                            <ArrowRight className="w-4 h-4 text-white/20 group-hover:text-white -translate-x-2 group-hover:translate-x-0 transition-all opacity-0 group-hover:opacity-100" />
+                        </div>
+                        <div>
+                            <h3 className="text-xl font-tech font-bold text-white uppercase tracking-wide">Modify</h3>
+                            <p className="text-[10px] font-mono text-white/40">Edit Existing Config</p>
+                        </div>
+                    </div>
+                </button>
+            </div>
+
+            {/* RIGHT: JOIN ROLES (8 Cols) */}
+            <div className="lg:col-span-8 flex flex-col gap-4 animate-in slide-in-from-right-4 duration-700 delay-200">
+                <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1 pl-1">Login Protocols</p>
+                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
+                    <RoleCard 
+                        icon={Shield} 
+                        title="Admin" 
+                        color="text-brand" 
+                        borderColor="hover:border-brand/50"
+                        bgHover="group-hover:bg-brand/5"
+                        desc="Full Control"
+                        onClick={() => openModal('ADMIN')} 
+                    />
+                    <RoleCard 
+                        icon={Users} 
+                        title="Team" 
+                        color="text-cyan-400" 
+                        borderColor="hover:border-cyan-400/50"
+                        bgHover="group-hover:bg-cyan-400/5"
+                        desc="Bidding Access"
+                        onClick={() => openModal('TEAM')} 
+                    />
+                    <RoleCard 
+                        icon={Eye} 
+                        title="View" 
+                        color="text-yellow-400" 
+                        borderColor="hover:border-yellow-400/50"
+                        bgHover="group-hover:bg-yellow-400/5"
+                        desc="Read Only"
+                        onClick={() => openModal('SPECTATOR')} 
+                    />
+                </div>
+            </div>
+
+        </div>
+
+      </div>
+
+      {/* --- UNIVERSAL LOGIN MODAL --- */}
+      {activeModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
+            <div 
+                className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 w-full max-w-md relative shadow-2xl animate-in zoom-in-95 duration-300 overflow-hidden"
+                onClick={(e) => e.stopPropagation()}
+            >
+                {/* Modal Background FX */}
+                <div className="absolute top-0 right-0 w-[200px] h-[200px] bg-brand/5 blur-[80px] rounded-full pointer-events-none"></div>
+                
+                {/* Header */}
+                <div className="flex justify-between items-start mb-8 relative z-10">
+                    <div>
+                        <div className="flex items-center gap-2 mb-2">
+                            <Terminal className="w-4 h-4 text-brand" />
+                            <span className="text-[10px] font-mono text-brand uppercase tracking-widest">Secure Terminal</span>
+                        </div>
+                        <h3 className="text-3xl font-tech font-bold text-white uppercase tracking-tight">
+                            {activeModal} <span className="text-white/40">Login</span>
+                        </h3>
+                    </div>
+                    <button onClick={() => setActiveModal(null)} className="p-2 hover:bg-white/10 rounded-full transition-colors text-white/40 hover:text-white">
+                        <X className="w-5 h-5" />
+                    </button>
                 </div>
 
-                {error && <div className="mb-4 p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold text-center rounded">{error}</div>}
+                {/* Error Message */}
+                {error && (
+                    <div className="mb-6 p-3 bg-red-500/10 border border-red-500/20 text-red-400 text-xs font-bold text-center rounded-lg animate-pulse">
+                        ⚠️ {error}
+                    </div>
+                )}
 
-                <form onSubmit={handleSubmit} className="space-y-4">
-                    <div>
-                        <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest pl-1">League ID</label>
-                        <input 
-                            type="text" 
-                            className="w-full bg-[#050505] border border-white/10 rounded-lg px-4 py-3 text-white font-mono focus:border-brand/50 outline-none"
-                            placeholder="CPL-XXX-XXX"
-                            value={form.leagueId}
-                            onChange={(e) => setForm({...form, leagueId: e.target.value})}
-                            required
-                        />
+                {/* Form */}
+                <form onSubmit={handleSubmit} className="space-y-5 relative z-10">
+                    <div className="space-y-1.5 group/input">
+                        <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest pl-1 group-focus-within/input:text-brand transition-colors">League ID</label>
+                        <div className="relative">
+                            <input 
+                                type="text" 
+                                className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3.5 text-white font-mono placeholder:text-white/10 focus:border-brand/50 focus:outline-none transition-all text-sm uppercase"
+                                placeholder="CPL-XXX-XXX"
+                                value={form.leagueId}
+                                onChange={(e) => setForm({...form, leagueId: e.target.value.toUpperCase()})}
+                                required
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-white/10 pointer-events-none"><Zap className="w-4 h-4" /></div>
+                        </div>
                     </div>
-                    <div>
-                        <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest pl-1">
-                            {activeModal === 'TEAM' ? 'Team Access Code' : 'Admin Passcode'}
+                    
+                    <div className="space-y-1.5 group/input">
+                        <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest pl-1 group-focus-within/input:text-brand transition-colors">
+                            {activeModal === 'TEAM' ? 'Access Code' : 'Admin Passcode'}
                         </label>
-                        <input 
-                            type="text" 
-                            className="w-full bg-[#050505] border border-white/10 rounded-lg px-4 py-3 text-white font-mono focus:border-brand/50 outline-none"
-                            placeholder="SECRET-KEY"
-                            value={form.passcode}
-                            onChange={(e) => setForm({...form, passcode: e.target.value})}
-                            required
-                        />
+                        <div className="relative">
+                            <input 
+                                type="password" 
+                                className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3.5 text-white font-mono placeholder:text-white/10 focus:border-brand/50 focus:outline-none transition-all text-sm"
+                                placeholder="••••••••••"
+                                value={form.passcode}
+                                onChange={(e) => setForm({...form, passcode: e.target.value})}
+                                required
+                            />
+                            <div className="absolute right-3 top-1/2 -translate-y-1/2 text-white/10 pointer-events-none"><Lock className="w-4 h-4" /></div>
+                        </div>
                     </div>
-                    <button disabled={loading} className="w-full py-4 bg-white text-black font-bold uppercase tracking-widest cut-corners-sm hover:scale-[1.02] transition-transform flex justify-center">
-                        {loading ? 'Verifying...' : 'Authenticate'}
+
+                    <button 
+                        disabled={loading} 
+                        className="w-full group/btn relative px-6 py-4 bg-white text-black cut-corners-sm overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_20px_rgba(255,255,255,0.1)] mt-4"
+                    >
+                        <div className="absolute inset-0 bg-brand translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300 ease-out"></div>
+                        <div className="relative z-10 flex items-center justify-center gap-2">
+                            {loading ? (
+                                <span className="font-mono text-xs font-bold uppercase tracking-widest">Verifying...</span>
+                            ) : (
+                                <>
+                                    <span className="font-tech font-bold text-lg uppercase tracking-widest group-hover/btn:text-white transition-colors">Authenticate</span>
+                                    <ArrowRight className="w-4 h-4 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
+                                </>
+                            )}
+                        </div>
                     </button>
                 </form>
             </div>
@@ -142,16 +249,24 @@ export default function JoinAuction() {
   );
 }
 
-function RoleCard({ icon: Icon, title, color, onClick }) {
+// Sub-Component for Role Cards
+function RoleCard({ icon: Icon, title, color, borderColor, bgHover, desc, onClick }) {
     return (
-        <button onClick={onClick} className="group relative bg-[#080808] border border-white/10 p-8 flex items-center gap-6 hover:border-white/30 transition-all cut-corners text-left">
-            <div className={`p-4 rounded-full bg-white/5 border border-white/5 ${color} group-hover:scale-110 transition-transform`}>
+        <button 
+            onClick={onClick} 
+            className={`group relative flex flex-col justify-between p-6 bg-[#0a0a0a] border border-white/10 ${borderColor} rounded-2xl transition-all hover:-translate-y-1 h-full text-left overflow-hidden`}
+        >
+            <div className={`absolute inset-0 ${bgHover} opacity-0 group-hover:opacity-100 transition-opacity duration-500`}></div>
+            
+            <div className={`w-12 h-12 rounded-xl bg-white/5 flex items-center justify-center mb-6 ${color} group-hover:scale-110 transition-transform duration-300 border border-white/5 relative z-10`}>
                 <Icon className="w-6 h-6" />
             </div>
-            <div>
-                <h3 className="text-2xl font-tech font-bold text-white uppercase">{title}</h3>
-                <div className="flex items-center gap-2 text-[10px] text-white/30 font-mono mt-1 group-hover:text-white/60">
-                    <Lock className="w-3 h-3" /> Login Required
+            
+            <div className="relative z-10">
+                <h3 className="text-2xl font-tech font-bold text-white uppercase tracking-wide group-hover:translate-x-1 transition-transform">{title}</h3>
+                <div className="flex items-center justify-between mt-2">
+                    <span className="text-[10px] font-mono text-white/30 uppercase tracking-wider">{desc}</span>
+                    <Lock className="w-3 h-3 text-white/20 group-hover:text-white transition-colors" />
                 </div>
             </div>
         </button>

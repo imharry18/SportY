@@ -9,6 +9,7 @@ export default function CreateAuction() {
   const router = useRouter();
   
   const [step, setStep] = useState(1); // 1 = Input, 2 = Success/Credentials
+  const [loading, setLoading] = useState(false); // Added loading state
   const [formData, setFormData] = useState({ name: '', logo: null });
   const [generatedCreds, setGeneratedCreds] = useState({ leagueId: '', passcode: '' });
   const [copied, setCopied] = useState(false);
@@ -36,16 +37,41 @@ export default function CreateAuction() {
     return `${part1}-${part2}-${part3}`;
   };
 
-  // 2. Handle Creation
-  const handleCreate = (e) => {
+  // 2. Handle Creation (Updated to Save to DB)
+  const handleCreate = async (e) => {
     e.preventDefault();
+    setLoading(true); // Start loading
     
-    // Generate IDs
+    // Generate IDs locally
     const newLeagueId = generateLeagueId();
-    const newPasscode = generateRandomString(10); // 10 Characters Code
+    const newPasscode = generateRandomString(10); 
     
-    setGeneratedCreds({ leagueId: newLeagueId, passcode: newPasscode });
-    setStep(2);
+    try {
+        // CALL THE API TO SAVE TO DATABASE
+        const res = await fetch('/api/auction/create', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                id: newLeagueId,        // Send the generated ID
+                name: formData.name,
+                passcode: newPasscode   // Send the generated Passcode
+            }),
+        });
+
+        const data = await res.json();
+
+        if (res.ok) {
+            setGeneratedCreds({ leagueId: newLeagueId, passcode: newPasscode });
+            setStep(2);
+        } else {
+            alert(data.message || "Failed to create lobby");
+        }
+    } catch (error) {
+        console.error(error);
+        alert("Network error occurred");
+    } finally {
+        setLoading(false);
+    }
   };
 
   const copyToClipboard = () => {
@@ -55,7 +81,7 @@ export default function CreateAuction() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!user) return null; // Prevent flash
+  if (!user) return null; 
 
   return (
     <div className="min-h-screen w-full bg-[#050505] flex items-center justify-center relative overflow-hidden py-12 px-6">
@@ -66,12 +92,10 @@ export default function CreateAuction() {
       <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-cyan-900/10 blur-[150px] rounded-full pointer-events-none mix-blend-screen"></div>
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] pointer-events-none animate-pulse"></div>
 
-      {/* CHANGED: Reduced max-width to 'max-w-lg' for a tighter, professional look */}
       <div className="max-w-lg w-full relative z-10">
         
         {/* --- STEP 1: INPUT DETAILS --- */}
         {step === 1 && (
-          // CHANGED: Reduced padding and border radius slightly
           <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 md:p-10 relative overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-700">
             
             {/* Header */}
@@ -80,7 +104,6 @@ export default function CreateAuction() {
                   <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
                   <span className="text-[10px] font-mono text-white/50 uppercase tracking-widest">Protocol v3.0</span>
                </div>
-              {/* CHANGED: Scaled down text size */}
               <h1 className="text-4xl md:text-5xl font-tech font-bold text-white mb-3 uppercase tracking-tighter leading-none">
                 Initialize <br/> <span className="text-transparent bg-clip-text bg-gradient-to-r from-brand to-brand-glow">Lobby.</span>
               </h1>
@@ -89,14 +112,12 @@ export default function CreateAuction() {
               </p>
             </div>
 
-            {/* CHANGED: Reduced vertical spacing */}
             <form onSubmit={handleCreate} className="space-y-6 relative z-10">
               
               {/* Input Group */}
               <div className="space-y-1.5 group/input">
                 <label className="text-[10px] font-bold text-brand uppercase tracking-[0.2em] ml-1 group-focus-within/input:text-brand-glow transition-colors">Tournament Name</label>
                 <div className="relative">
-                    {/* CHANGED: Smaller input padding and font size */}
                     <input 
                         type="text" 
                         value={formData.name}
@@ -114,7 +135,6 @@ export default function CreateAuction() {
               {/* Upload Group */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-brand uppercase tracking-[0.2em] ml-1">League Identity</label>
-                {/* CHANGED: Reduced height */}
                 <label className="relative flex flex-col items-center justify-center w-full h-28 border border-dashed border-white/10 rounded-xl cursor-pointer hover:border-brand/30 hover:bg-white/[0.02] transition-all group/upload overflow-hidden">
                   <div className="absolute inset-0 bg-brand/5 scale-0 group-hover/upload:scale-100 transition-transform duration-500 rounded-xl origin-center"></div>
                   <div className="relative z-10 flex flex-col items-center justify-center pt-2 pb-3">
@@ -126,15 +146,17 @@ export default function CreateAuction() {
               </div>
 
               {/* Action Button */}
-              {/* CHANGED: Reduced padding */}
               <button 
                 type="submit" 
-                className="w-full group/btn relative px-6 py-4 bg-white text-black cut-corners-sm overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_60px_rgba(230,46,46,0.4)] mt-2"
+                disabled={loading} // Disable while saving
+                className="w-full group/btn relative px-6 py-4 bg-white text-black cut-corners-sm overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_60px_rgba(230,46,46,0.4)] mt-2 disabled:opacity-50"
               >
                   <div className="absolute inset-0 bg-brand translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300 ease-out"></div>
                   <div className="relative z-10 flex items-center justify-center gap-3">
-                      <span className="font-tech font-bold text-lg uppercase tracking-widest group-hover/btn:text-white transition-colors">Generate System</span>
-                      <ArrowRight className="w-5 h-5 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />
+                      <span className="font-tech font-bold text-lg uppercase tracking-widest group-hover/btn:text-white transition-colors">
+                        {loading ? 'Saving to Database...' : 'Generate System'}
+                      </span>
+                      {!loading && <ArrowRight className="w-5 h-5 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />}
                   </div>
               </button>
 
@@ -144,7 +166,6 @@ export default function CreateAuction() {
 
         {/* --- STEP 2: SUCCESS & CREDENTIALS --- */}
         {step === 2 && (
-          // CHANGED: Reduced padding and border radius
           <div className="bg-[#0a0a0a] border border-green-500/30 rounded-3xl p-8 md:p-10 relative overflow-hidden animate-in zoom-in-95 duration-500 shadow-[0_0_100px_rgba(34,197,94,0.1)]">
             
             {/* Decoration */}

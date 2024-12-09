@@ -3,11 +3,12 @@ import prisma from '@/lib/db/prisma';
 
 export async function POST(request) {
   try {
+    // Note: The frontend sends 'leagueId' but database column is 'id'
     const { leagueId, passcode, role } = await request.json();
 
     // 1. Find Auction
     const auction = await prisma.auction.findUnique({
-      where: { id: leagueId },
+      where: { id: leagueId }, // Search by your custom ID
       include: { teams: true } 
     });
 
@@ -15,22 +16,32 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "League ID not found." }, { status: 404 });
     }
 
-    // 2. Logic for ADMIN / SETUP / EDIT
-    if (role === 'ADMIN' || role === 'SETUP') {
+    // --- LOGIC FOR SETUP (The only role allowed when PENDING) ---
+    if (role === 'SETUP' || role === 'EDIT') {
       if (auction.passcode !== passcode) {
         return NextResponse.json({ success: false, message: "Invalid Admin Passcode." }, { status: 401 });
       }
-
-      // Special Check for Admin: Must be SETUP first
-      if (role === 'ADMIN' && auction.status === 'PENDING') {
-        return NextResponse.json({ success: false, message: "Auction not initialized. Please Run Setup first." }, { status: 403 });
-      }
-
-      return NextResponse.json({ success: true, redirect: role === 'SETUP' ? `/setup-auction?id=${leagueId}` : `/admin/dashboard` });
+      // Setup is always allowed, redirects to setup page
+      return NextResponse.json({ success: true, redirect: `/setup-auction?id=${leagueId}&key=${passcode}` });
     }
 
-    // 3. Logic for TEAM
+    // --- LOGIC FOR ADMIN (Must be setup first) ---
+    if (role === 'ADMIN') {
+        if (auction.status === 'PENDING') {
+            return NextResponse.json({ success: false, message: "Lobby not set up yet. Use 'Setup Auction' first." }, { status: 403 });
+        }
+        if (auction.passcode !== passcode) {
+            return NextResponse.json({ success: false, message: "Invalid Admin Passcode." }, { status: 401 });
+        }
+        return NextResponse.json({ success: true, redirect: `/admin/dashboard` });
+    }
+
+    // --- LOGIC FOR TEAMS (Must be setup first) ---
     if (role === 'TEAM') {
+      if (auction.status === 'PENDING') {
+        return NextResponse.json({ success: false, message: "Auction has not started yet." }, { status: 403 });
+      }
+      
       // For teams, the "passcode" input is treated as their Team Access Code
       const team = auction.teams.find(t => t.accessCode === passcode);
       
@@ -38,11 +49,16 @@ export async function POST(request) {
         return NextResponse.json({ success: false, message: "Invalid Team Code." }, { status: 401 });
       }
 
-      if (auction.status === 'PENDING') {
-        return NextResponse.json({ success: false, message: "Auction has not started yet." }, { status: 403 });
-      }
-
       return NextResponse.json({ success: true, redirect: `/team/dashboard` });
+    }
+
+    // --- LOGIC FOR SPECTATORS ---
+    if (role === 'SPECTATOR') {
+        if (auction.status === 'PENDING') {
+            return NextResponse.json({ success: false, message: "Lobby is not live yet." }, { status: 403 });
+        }
+        // Logic for spectator password if you have one, or just allow
+        return NextResponse.json({ success: true, redirect: `/spectator/view` });
     }
 
     return NextResponse.json({ success: false, message: "Invalid Role" }, { status: 400 });
