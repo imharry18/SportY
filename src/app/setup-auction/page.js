@@ -105,11 +105,13 @@ export default function SetupAuction() {
     }
   };
 
-  // --- Submission ---
+// Inside src/app/setup-auction/page.js
+
+// ... imports and state
+
   const handleSubmit = async () => {
     setLoading(true);
     try {
-      // 1. Create Teams & Update Auction
       const res = await fetch('/api/auction/setup', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -117,14 +119,21 @@ export default function SetupAuction() {
             leagueId: urlId,
             theme: config.type,
             date: new Date().toISOString(),
-            teams: config.teamNames.slice(0, config.teamCount).map((name, i) => name.trim() || `Team ${i+1}`)
+            budget: config.purse, // Send the custom purse
+            teams: config.teamNames.slice(0, config.teamCount).map((name, i) => name.trim() || `Team ${i+1}`),
+            // SEND THE PLAYERS!
+            players: parsedPlayers.map(p => ({
+                name: p.name,
+                category: p.role,
+                basePrice: parseFloat(p.price) || 0,
+            }))
         }),
       });
       
       const data = await res.json();
 
       if(res.ok) {
-        setFinalTeams(data.teams); // Save teams with codes for display
+        setFinalTeams(data.teams); 
         setStep(5);
       } else {
         alert("Setup failed: " + data.message);
@@ -136,6 +145,8 @@ export default function SetupAuction() {
         setLoading(false);
     }
   };
+
+// ... rest of component
 
   // --- Download Logic ---
   const downloadCredentials = () => {

@@ -12,7 +12,7 @@ export default function CreateAuction() {
   const [step, setStep] = useState(1);
   const [loading, setLoading] = useState(false);
   
-  // Updated State to hold the file and the preview URL
+  // State for file upload
   const [formData, setFormData] = useState({ name: '', logoFile: null, logoPreview: null });
   
   const [generatedCreds, setGeneratedCreds] = useState({ leagueId: '', passcode: '' });
@@ -36,7 +36,7 @@ export default function CreateAuction() {
     return `${p1}-${p2}-${p3}`;
   };
 
-  // --- NEW: Handle Image Selection ---
+  // --- Handle Image Selection ---
   const handleImageChange = (e) => {
     const file = e.target.files[0];
     if (file) {
@@ -46,10 +46,20 @@ export default function CreateAuction() {
     }
   };
 
-  // --- NEW: Remove Image ---
+  // --- Remove Image ---
   const removeImage = (e) => {
-    e.preventDefault(); // Prevent triggering the label click
+    e.preventDefault(); 
     setFormData({ ...formData, logoFile: null, logoPreview: null });
+  };
+
+  // --- Helper: Convert File to Base64 String ---
+  const convertToBase64 = (file) => {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.readAsDataURL(file);
+      reader.onload = () => resolve(reader.result);
+      reader.onerror = (error) => reject(error);
+    });
   };
 
   const handleCreate = async (e) => {
@@ -60,16 +70,29 @@ export default function CreateAuction() {
     const newPasscode = generateRandomString(10); 
     
     try {
-        // NOTE: Currently we only send text data. 
-        // To save the image, you would need to upload 'formData.logoFile' to a cloud storage (like AWS S3 or Vercel Blob) 
-        // and then send the returned URL here.
+        // 1. Process Image if exists
+        let finalLogoUrl = null;
+        if (formData.logoFile) {
+            try {
+                // Convert the file to a string so we can save it in the database
+                finalLogoUrl = await convertToBase64(formData.logoFile);
+            } catch (err) {
+                console.error("Image processing failed", err);
+                alert("Failed to process image");
+                setLoading(false);
+                return;
+            }
+        }
+
+        // 2. Send Data to API
         const res = await fetch('/api/auction/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
                 id: newLeagueId,       
                 name: formData.name,
-                passcode: newPasscode
+                passcode: newPasscode,
+                logoUrl: finalLogoUrl // Send the Base64 string as the URL
             }),
         });
 
@@ -143,7 +166,7 @@ export default function CreateAuction() {
                 </div>
               </div>
 
-              {/* --- UPDATED UPLOAD SECTION --- */}
+              {/* --- UPLOAD SECTION --- */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-brand uppercase tracking-[0.2em] ml-1">League Identity</label>
                 
