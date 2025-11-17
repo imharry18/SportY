@@ -217,7 +217,7 @@ export default function AdminDashboard() {
       }
       else if(action === 'SUBMIT') {
           // 1. Start Animation Phase
-          triggerToast("Miracle Flux Initiated (12s)...");
+          triggerToast("Miracle Flux Initiated (10s)...");
           await fetch('/api/admin/flux', { method: 'POST', body: JSON.stringify({ action: 'START_ANIMATION', auctionId }) });
           
           // 2. Close Modal immediately so Admin sees the animation too
@@ -235,7 +235,7 @@ export default function AdminDashboard() {
                   setFluxSelection([]);
                   setRefreshKey(k => k + 1);
               }
-          }, 12000); // 12 Seconds Delay
+          }, 10000); // 10 Seconds Delay
       }
       else if(action === 'CLOSE') {
           setShowFluxModal(false);

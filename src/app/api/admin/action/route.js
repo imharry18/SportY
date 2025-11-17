@@ -15,26 +15,7 @@ export async function POST(request) {
         await prisma.player.update({ where: { id: pId }, data: { order: newOrder } });
     };
 
-    // Helper: Set NEXT unsold player as active
-    const setNextActive = async (aId) => {
-        const nextPlayer = await prisma.player.findFirst({
-            where: { auctionId: aId, isSold: false },
-            orderBy: { order: 'asc' }
-        });
-        
-        // If a player is found, set them active. If none, clear active state.
-        await prisma.auction.update({
-            where: { id: aId },
-            data: { 
-                activePlayerId: nextPlayer ? nextPlayer.id : null,
-                currentBid: 0,
-                currentBidderId: null,
-                fluxData: JSON.stringify({ state: 'IDLE' }) // Ensure flux is cleared
-            }
-        });
-    };
-
-    // 1. SET ACTIVE PLAYER
+    // 1. SET ACTIVE PLAYER (Manually Next/Prev)
     if (action === 'SET_ACTIVE') {
         await prisma.auction.update({
             where: { id: auctionId },
@@ -57,12 +38,12 @@ export async function POST(request) {
         return NextResponse.json({ success: true });
     }
 
-    // 3. SELL PLAYER (Auto-Advance Added)
+    // 3. SELL PLAYER (UPDATED: No Auto-Advance)
     if (action === 'SELL') {
       const team = await prisma.team.findUnique({ where: { id: teamId } });
       if (team.purseBalance < amount) return NextResponse.json({ success: false, message: "Insufficient Purse!" }, { status: 400 });
 
-      // 1. Mark Sold
+      // Execute Transaction
       await prisma.$transaction([
         prisma.player.update({
           where: { id: playerId },
@@ -74,12 +55,12 @@ export async function POST(request) {
         })
       ]);
 
-      // 2. Move to bottom
+      // Move player to bottom
       await moveToEnd(playerId, auctionId);
 
-      // 3. Auto-Advance to next unsold player
-      await setNextActive(auctionId);
-
+      // IMPORTANT: We do NOT advance to the next player automatically here.
+      // This keeps the "Sold" state active on the viewer screen.
+      
       return NextResponse.json({ success: true });
     }
 
@@ -111,7 +92,7 @@ export async function POST(request) {
       return NextResponse.json({ success: true, player: newPlayer });
     }
 
-    // 6. EDIT/DELETE (Standard)
+    // 6. EDIT/DELETE
     if (action === 'EDIT_PLAYER') {
         await prisma.player.update({ where: { id: playerId }, data: { name: playerData.name, category: playerData.role, basePrice: parseFloat(playerData.price) } });
         return NextResponse.json({ success: true });

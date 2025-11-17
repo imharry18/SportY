@@ -21,6 +21,7 @@ export async function POST(request) {
         return NextResponse.json({ success: true });
     }
 
+    // --- MAIN EXECUTION LOGIC ---
     if (action === 'EXECUTE') {
         const players = await prisma.player.findMany({ where: { id: { in: playerIds } } });
         const teams = await prisma.team.findMany({ where: { auctionId } });
@@ -36,16 +37,15 @@ export async function POST(request) {
             const p = shuffledPlayers[i];
             const t = shuffledTeams[i];
 
+            // 1. Assign Player to Team (RECORD SOLD PRICE BUT DO NOT DEDUCT FROM PURSE)
             dbOperations.push(prisma.player.update({
                 where: { id: p.id },
                 data: { isSold: true, soldPrice: p.basePrice, teamId: t.id }
             }));
             
-            dbOperations.push(prisma.team.update({
-                where: { id: t.id },
-                data: { purseBalance: { decrement: p.basePrice } }
-            }));
-
+            // --- REMOVED: PURSE DEDUCTION LOGIC ---
+            // Money is NOT deducted for Flux players as per request
+            
             assignments.push({
                 playerId: p.id,
                 playerName: p.name,
@@ -57,7 +57,7 @@ export async function POST(request) {
 
         await prisma.$transaction(dbOperations);
 
-        // 1. Move sold players to bottom
+        // 2. Move sold players to bottom of the auction list
         const lastPlayer = await prisma.player.findFirst({ where: { auctionId }, orderBy: { order: 'desc' } });
         let startOrder = (lastPlayer?.order || 0) + 1;
         
@@ -65,13 +65,13 @@ export async function POST(request) {
             await prisma.player.update({ where: { id: shuffledPlayers[i].id }, data: { order: startOrder + i } });
         }
 
-        // 2. Auto-Select NEXT Unsold Player
+        // 3. Auto-Select NEXT Unsold Player for the main screen
         const nextActive = await prisma.player.findFirst({
             where: { auctionId, isSold: false },
             orderBy: { order: 'asc' }
         });
 
-        // 3. Update Auction State (Reveal Flux + Set New Player)
+        // 4. Update Auction State (Reveal Flux)
         await prisma.auction.update({
             where: { id: auctionId },
             data: { 

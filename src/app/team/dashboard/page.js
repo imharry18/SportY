@@ -24,11 +24,13 @@ export default function TeamDashboard() {
   const [newSigning, setNewSigning] = useState(null);
   const previousSquadCount = useRef(0);
   const previousPurse = useRef(0); 
+  const isFirstLoad = useRef(true); // <--- FIX: Prevents popup on refresh
   const [purseExchanged, setPurseExchanged] = useState(false);
   
-  // Flux State
-  const [fluxTimer, setFluxTimer] = useState(30);
-  const [showFluxResult, setShowFluxResult] = useState(false);
+  // -- FLUX STATE MANAGEMENT --
+  const [fluxMode, setFluxMode] = useState('IDLE'); // 'IDLE' | 'ANIMATING' | 'SHOW_RESULT'
+  const [fluxCountdown, setFluxCountdown] = useState(10);
+  const lastProcessedFluxId = useRef(''); 
 
   // Modals
   const [showSquadModal, setShowSquadModal] = useState(false);
@@ -44,8 +46,11 @@ export default function TeamDashboard() {
     const initialTeam = JSON.parse(session);
     setTeam(initialTeam);
     
-    // Initialize Ref to current purse so we don't flash on load
     previousPurse.current = initialTeam.purse;
+
+    // Load last processed Flux ID
+    const savedFluxId = localStorage.getItem('last_seen_flux_id');
+    if (savedFluxId) lastProcessedFluxId.current = savedFluxId;
 
     const pollData = async () => {
         try {
@@ -57,19 +62,27 @@ export default function TeamDashboard() {
                 const myLatestTeamData = newState.teams.find(t => t.id === initialTeam.id);
                 const myPlayers = newState.players.filter(p => p.teamId === initialTeam.id);
 
-                // --- FIX: ROBUST PURSE SYNC ---
-                if (myLatestTeamData) {
-                    // Compare Server Data vs Local Ref
+                // --- FIX: SILENT SYNC ON REFRESH ---
+                if (isFirstLoad.current) {
+                    previousSquadCount.current = myPlayers.length;
+                    if (myLatestTeamData) previousPurse.current = myLatestTeamData.purse;
+                    isFirstLoad.current = false;
+                    
+                    // Just update state, don't trigger events
+                    setAuctionState(newState);
+                    setSquad(myPlayers);
+                    if(myLatestTeamData) setTeam(prev => ({ ...prev, ...myLatestTeamData }));
+                    return; 
+                }
+
+                // --- ROBUST PURSE SYNC ---
+                if (myLatestTeamData && team) {
                     if (myLatestTeamData.purse !== previousPurse.current) {
-                        console.log("Purse Update Detected:", previousPurse.current, "->", myLatestTeamData.purse);
-                        
                         setPurseExchanged(true); 
                         setTimeout(() => setPurseExchanged(false), 2000);
                         
-                        // Update Ref
                         previousPurse.current = myLatestTeamData.purse;
 
-                        // Update State
                         setTeam(prev => ({
                             ...prev,
                             purse: myLatestTeamData.purse,
@@ -78,23 +91,39 @@ export default function TeamDashboard() {
                     }
                 }
 
+                // --- FLUX LOGIC (Fixed Loop) ---
+                const serverFluxState = newState.fluxData?.state || 'IDLE';
+                const currentFluxId = newState.fluxData?.matches 
+                    ? `${newState.fluxData.matches.length}_${newState.fluxData.matches[0].playerId}` 
+                    : 'none';
+
+                if (serverFluxState === 'ANIMATING') {
+                    // FIX: Only start animation if we are totally IDLE.
+                    // If we are already 'ANIMATING' (timer running) or 'SHOW_RESULT' (done), ignore server.
+                    if (fluxMode === 'IDLE') {
+                        setFluxMode('ANIMATING');
+                        setFluxCountdown(10); 
+                    }
+                } 
+                else if (serverFluxState === 'REVEAL') {
+                    // Only show result if we haven't seen this specific ID yet
+                    if (currentFluxId !== lastProcessedFluxId.current && fluxMode !== 'SHOW_RESULT') {
+                        setFluxMode('SHOW_RESULT');
+                    }
+                } 
+                else if (serverFluxState === 'IDLE') {
+                    if (fluxMode !== 'IDLE') setFluxMode('IDLE');
+                }
+
                 // --- DETECT NEW SIGNING ---
+                // Only trigger if we are NOT in any Flux mode
                 if (myPlayers.length > previousSquadCount.current) {
-                    // Avoid triggering on first load (0 -> X)
-                    if (previousSquadCount.current !== 0) {
+                    if (fluxMode === 'IDLE' && newState.fluxData?.state === 'IDLE') {
                         const newestPlayer = myPlayers[myPlayers.length - 1];
-                        if (newState.fluxData?.state !== 'REVEAL') {
-                            setNewSigning(newestPlayer);
-                        }
+                        setNewSigning(newestPlayer);
                     }
                 }
                 previousSquadCount.current = myPlayers.length;
-
-                // --- FLUX ---
-                if (newState.fluxData?.state === 'REVEAL' && auctionState?.fluxData?.state !== 'REVEAL') {
-                    setShowFluxResult(true);
-                    setFluxTimer(30);
-                }
                 
                 setAuctionState(newState);
                 setSquad(myPlayers);
@@ -110,27 +139,31 @@ export default function TeamDashboard() {
     const interval = setInterval(pollData, 1000);
 
     return () => clearInterval(interval);
-  }, [router]); // Removed dependencies to prevent interval resets
+  }, [router, fluxMode]); // Removed fluxCountdown from dep array to prevent re-running poll logic on tick
 
-  // 2. Flux Timer Logic
+  // 2. Local Flux Timer
   useEffect(() => {
-      // Auto-close flux result if server resets to IDLE
-      if (auctionState?.fluxData?.state === 'IDLE' && showFluxResult) {
-          handleFluxContinue();
+      let timer;
+      if (fluxMode === 'ANIMATING') {
+          if (fluxCountdown > 0) {
+              timer = setInterval(() => setFluxCountdown(prev => prev - 1), 1000);
+          } else {
+              setFluxMode('SHOW_RESULT');
+          }
       }
+      return () => clearInterval(timer);
+  }, [fluxMode, fluxCountdown]);
 
-      if (showFluxResult && fluxTimer > 0) {
-          const timer = setInterval(() => setFluxTimer(prev => prev - 1), 1000);
-          return () => clearInterval(timer);
-      } else if (fluxTimer === 0) {
-          handleFluxContinue();
-      }
-  }, [showFluxResult, fluxTimer, auctionState]);
-
+  // 3. Handle "Continue" Button Click
   const handleFluxContinue = () => {
-      setShowFluxResult(false);
-      setLoading(true); 
-      setTimeout(() => setLoading(false), 500); 
+      const currentFluxId = auctionState.fluxData?.matches 
+        ? `${auctionState.fluxData.matches.length}_${auctionState.fluxData.matches[0].playerId}` 
+        : 'none';
+      
+      lastProcessedFluxId.current = currentFluxId;
+      localStorage.setItem('last_seen_flux_id', currentFluxId);
+
+      setFluxMode('IDLE');
   };
 
   const handleLogout = () => { localStorage.removeItem('sporty_team_session'); router.push('/join-auction'); };
@@ -157,10 +190,15 @@ export default function TeamDashboard() {
 
   if (loading || !auctionState) return <div className="h-screen bg-[#0a0a0a] flex items-center justify-center text-white font-mono uppercase tracking-widest animate-pulse">Connecting Satellite...</div>;
 
-  // Render Logic
-  if (auctionState.fluxData?.state === 'ANIMATING') return <FluxAnimating />;
-  if (showFluxResult) return <FluxResult auctionState={auctionState} team={team} onContinue={handleFluxContinue} timer={fluxTimer} />;
+  // --- VIEW RENDER LOGIC ---
+  
+  // 1. Flux Animation View
+  if (fluxMode === 'ANIMATING') return <FluxAnimating timeLeft={fluxCountdown} />;
+  
+  // 2. Flux Result View
+  if (fluxMode === 'SHOW_RESULT') return <FluxResult auctionState={auctionState} team={team} onContinue={handleFluxContinue} />;
 
+  // 3. Standard Dashboard View
   const activePlayer = auctionState.activePlayer;
   const isPlayerSold = activePlayer?.isSold;
   const soldToMyTeam = isPlayerSold && activePlayer?.teamId === team.id;
@@ -202,7 +240,11 @@ export default function TeamDashboard() {
         />
       </main>
 
-      <NewSigningModal player={newSigning} onClose={() => setNewSigning(null)} />
+      {/* Show New Signing Modal ONLY if we are not in Flux Mode */}
+      {fluxMode === 'IDLE' && (
+          <NewSigningModal player={newSigning} onClose={() => setNewSigning(null)} />
+      )}
+      
       {showSquadModal && <SquadModal squad={squad} onClose={() => setShowSquadModal(false)} totalSpent={squad.reduce((a, b) => a + (b.soldPrice || 0), 0)} />}
       {showEditModal && <EditTeamModal team={team} onClose={() => setShowEditModal(false)} onSave={handleUpdateTeam} />}
     </div>

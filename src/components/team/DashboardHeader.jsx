@@ -1,5 +1,5 @@
 import Image from 'next/image';
-import { Shield, Trophy, LogOut, Wallet } from 'lucide-react';
+import { Shield, Trophy, LogOut, Wallet, Edit } from 'lucide-react';
 
 export default function DashboardHeader({ team, auctionName, purse, squadCount, purseExchanged, onEdit, onShowSquad, onLogout }) {
   const themeColor = team?.themeColor || '#E62E2E';
@@ -8,8 +8,9 @@ export default function DashboardHeader({ team, auctionName, purse, squadCount, 
     <header className="h-20 shrink-0 border-b border-white/10 bg-[#0a0a0a]/80 backdrop-blur-xl z-40 relative shadow-2xl">
         <div className="max-w-[1920px] mx-auto px-8 h-full flex items-center justify-between">
           
-          {/* My Team Info */}
-          <div className="flex items-center gap-5 w-1/3 group cursor-pointer" onClick={onEdit}>
+          {/* My Team Info (Left) */}
+          <div className="flex items-center gap-5 w-1/3 group">
+            {/* Logo */}
             <div className="relative w-12 h-12 rounded-full border-2 bg-white/5 flex items-center justify-center overflow-hidden transition-all duration-300 group-hover:scale-110 group-hover:shadow-[0_0_20px_rgba(255,255,255,0.1)]" style={{ borderColor: themeColor }}>
                 {team?.logoUrl ? <Image src={team.logoUrl} fill className="object-cover" alt={team.name} /> : <Shield className="w-5 h-5 text-white/20" />}
             </div>
@@ -22,7 +23,7 @@ export default function DashboardHeader({ team, auctionName, purse, squadCount, 
             </div>
           </div>
 
-          {/* Tournament Name */}
+          {/* Tournament Name (Center) */}
           <div className="absolute left-1/2 top-1/2 -translate-x-1/2 -translate-y-1/2 text-center hidden md:block">
              <div className="flex items-center gap-2 opacity-40 mb-1 justify-center">
                 <Trophy className="w-3 h-3" />
@@ -31,11 +32,11 @@ export default function DashboardHeader({ team, auctionName, purse, squadCount, 
              <h2 className="text-lg font-tech font-bold text-white uppercase tracking-widest text-glow">{auctionName}</h2>
           </div>
 
-          {/* Stats & Actions */}
-          <div className="flex items-center justify-end gap-6 w-1/3">
+          {/* Stats & Actions (Right) */}
+          <div className="flex items-center justify-end gap-4 w-1/3">
              
-             {/* Dynamic Purse Display */}
-             <div className={`text-right px-4 py-1.5 rounded-xl border transition-all duration-500 ${purseExchanged ? 'bg-red-500/10 border-red-500/50' : 'bg-transparent border-transparent'}`}>
+             {/* Purse Display */}
+             <div className={`text-right px-4 py-1.5 rounded-xl border transition-all duration-500 hidden sm:block ${purseExchanged ? 'bg-red-500/10 border-red-500/50' : 'bg-transparent border-transparent'}`}>
                 <div className={`text-[9px] uppercase font-bold mb-0.5 flex items-center justify-end gap-1 ${purseExchanged ? 'text-red-400' : 'text-white/30'}`}>
                     <Wallet className="w-3 h-3" /> Balance
                 </div>
@@ -44,18 +45,29 @@ export default function DashboardHeader({ team, auctionName, purse, squadCount, 
                 </div>
              </div>
 
-             <div className="h-8 w-px bg-white/10 hidden sm:block"></div>
+             <div className="h-8 w-px bg-white/10 hidden sm:block mx-2"></div>
              
-             <button onClick={onShowSquad} className="flex flex-col items-end group">
+             {/* Squad Button */}
+             <button onClick={onShowSquad} className="flex flex-col items-end group mr-2">
                 <div className="flex items-center gap-2 text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1 group-hover:text-white transition-colors">Squad</div>
                 <div className="w-12 h-8 flex items-center justify-center bg-white/5 border border-white/10 rounded-lg text-lg font-tech font-bold text-white group-hover:bg-white group-hover:text-black transition-all shadow-inner">
                     {squadCount}
                 </div>
              </button>
+
+             {/* NEW: Edit Button */}
+             <button 
+                onClick={onEdit} 
+                className="p-2.5 bg-white/5 border border-white/10 hover:bg-white hover:text-black rounded-full text-white/50 transition-all shadow-lg group"
+                title="Edit Team Settings"
+             >
+                <Edit className="w-5 h-5" />
+             </button>
              
+             {/* Logout Button */}
              <button onClick={onLogout} className="p-2.5 hover:bg-red-500/10 rounded-full text-white/20 hover:text-red-500 transition-colors border border-transparent hover:border-red-500/20"><LogOut className="w-5 h-5" /></button>
           </div>
         </div>
-      </header>
+    </header>
   );
 }
