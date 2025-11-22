@@ -58,23 +58,27 @@ model Team {
 
 
 model Auction {
-  id          String   @id @default(uuid())
-  name        String
-  logoUrl     String?
-  budget      Float
-  status      String   @default("PENDING")
-  passcode    String
-  theme       String?
-  ground      String?
-  bidIncrement String? @default("Dynamic")
-  eventDate   DateTime?
-  
-  // NEW: Stores the state of the FluxDivide animation (JSON String)
-  fluxData    String?  @default("{}") 
+  id           String   @id @default(uuid())
+  name         String
+  logoUrl      String?
+  budget       Float
+  status       String   @default("PENDING")
+  passcode     String
+  theme        String?
+  ground       String?
+  bidIncrement String?  @default("Dynamic")
+  eventDate    DateTime?
+  fluxData     String?  @default("{}") 
 
-  teams       Team[]
-  players     Player[]
-  createdAt   DateTime @default(now())
+  // --- NEW: LIVE AUCTION STATE ---
+  activePlayerId String? // The player currently on screen
+  currentBid     Float    @default(0)
+  currentBidderId String?
+  // -------------------------------
+
+  teams        Team[]
+  players      Player[]
+  createdAt    DateTime @default(now())
 }
 // prisma/schema.prisma
 
