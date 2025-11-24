@@ -58,9 +58,10 @@ export async function POST(request) {
               id: team.id,
               name: team.name,
               auctionId: auction.id,
-              auctionName: auction.name, // NEW: Added Tournament Name here
+              auctionName: auction.name,
               purse: team.purseBalance,
-              logoUrl: team.logoUrl
+              logoUrl: team.logoUrl,
+              themeColor: team.themeColor || '#E62E2E' // NEW: Send Color
           }
       });
     }

@@ -23,7 +23,6 @@ export async function GET(request) {
         tagline: auction.theme || "", 
         logoUrl: auction.logoUrl, 
         purse: auction.budget,
-        // Read actual values from DB
         bidIncrement: auction.bidIncrement || 'Dynamic',
         ground: auction.ground || '',
         
@@ -31,18 +30,18 @@ export async function GET(request) {
             id: t.id,
             name: t.name,
             purse: t.purseBalance,
-            accessCode: t.accessCode
+            accessCode: t.accessCode,
+            themeColor: t.themeColor || '#E62E2E', // NEW: Send Color
+            logoUrl: t.logoUrl // Ensure this is sent
         })),
         players: auction.players.map(p => ({
             id: p.id,
             name: p.name,
             role: p.category, 
             price: p.basePrice,
-            // --- NEW FIELDS FOR DASHBOARD ---
-            isSold: p.isSold,       // Needed to show purchase status
-            soldPrice: p.soldPrice, // Needed for Total Spent calc
-            teamId: p.teamId,       // Needed to filter "My Squad"
-            // --------------------------------
+            isSold: p.isSold,
+            soldPrice: p.soldPrice,
+            teamId: p.teamId,
             image: '' 
         }))
     };

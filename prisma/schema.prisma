@@ -36,15 +36,20 @@ model User {
 
 // ... Keep Team, Player, and Auction models same as before
 model Team {
-  id            String   @id @default(uuid())
-  name          String
-  purseBalance  Float    @default(50000000)
-  logoUrl       String?
-  accessCode    String   @unique // NEW: Secret code for team login
-  auctionId     String?  // NEW: Link to auction
-  auction       Auction? @relation(fields: [auctionId], references: [id])
-  owner         User[]
-  players       Player[]
+  id           String   @id @default(uuid())
+  name         String
+  purseBalance Float    @default(50000000)
+  logoUrl      String?
+  accessCode   String   @unique
+  
+  // --- NEW FIELD ---
+  themeColor   String?  @default("#E62E2E") // Default to Brand Red
+  // -----------------
+
+  auctionId    String?
+  auction      Auction? @relation(fields: [auctionId], references: [id])
+  owner        User[]
+  players      Player[]
 }
 
 // prisma/schema.prisma
