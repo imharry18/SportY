@@ -494,7 +494,11 @@ export default function SetupAuction() {
                         <button onClick={downloadCredentials} className="flex items-center justify-center gap-2 py-3 px-6 bg-white/10 border border-white/10 text-white font-bold uppercase tracking-widest rounded hover:bg-white/20 transition-colors">
                             <Download className="w-4 h-4" /> Download All as .TXT
                         </button>
-                        <button onClick={() => router.push('/admin/dashboard')} className="py-3 px-8 bg-white text-black font-bold uppercase tracking-widest rounded hover:bg-gray-200 transition-colors">
+                        <button 
+                            // FIX: Add ?id=${urlId} to the path
+                            onClick={() => router.push(`/admin/dashboard?id=${urlId}`)} 
+                            className="py-3 px-8 bg-white text-black font-bold uppercase tracking-widest rounded hover:bg-gray-200 transition-colors"
+                        >
                             Enter Admin Console
                         </button>
                     </div>

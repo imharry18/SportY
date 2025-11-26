@@ -5,7 +5,6 @@ export async function POST(request) {
   try {
     const { leagueId, passcode, role } = await request.json();
 
-    // 1. Find Auction
     const auction = await prisma.auction.findUnique({
       where: { id: leagueId },
       include: { teams: true } 
@@ -15,42 +14,28 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "League ID not found." }, { status: 404 });
     }
 
-    // --- LOGIC FOR SETUP & EDIT ---
+    // --- SETUP & EDIT ---
     if (role === 'SETUP' || role === 'EDIT') {
       if (auction.passcode !== passcode) {
         return NextResponse.json({ success: false, message: "Invalid Admin Passcode." }, { status: 401 });
       }
       const targetPage = role === 'EDIT' ? '/modify-auction' : '/setup-auction';
-      return NextResponse.json({ 
-        success: true, 
-        redirect: `${targetPage}?id=${leagueId}&key=${passcode}` 
-      });
+      return NextResponse.json({ success: true, redirect: `${targetPage}?id=${leagueId}&key=${passcode}` });
     }
 
-    // --- LOGIC FOR ADMIN ---
+    // --- ADMIN ---
     if (role === 'ADMIN') {
-        if (auction.status === 'PENDING') {
-            return NextResponse.json({ success: false, message: "Lobby not set up yet." }, { status: 403 });
-        }
-        if (auction.passcode !== passcode) {
-            return NextResponse.json({ success: false, message: "Invalid Admin Passcode." }, { status: 401 });
-        }
-        return NextResponse.json({ success: true, redirect: `/admin/dashboard` });
+        if (auction.status === 'PENDING') return NextResponse.json({ success: false, message: "Lobby not set up yet." }, { status: 403 });
+        if (auction.passcode !== passcode) return NextResponse.json({ success: false, message: "Invalid Admin Passcode." }, { status: 401 });
+        return NextResponse.json({ success: true, redirect: `/admin/dashboard?id=${leagueId}` });
     }
 
-    // --- LOGIC FOR TEAMS ---
+    // --- TEAM ---
     if (role === 'TEAM') {
-      if (auction.status === 'PENDING') {
-        return NextResponse.json({ success: false, message: "Auction has not started yet." }, { status: 403 });
-      }
-      
+      if (auction.status === 'PENDING') return NextResponse.json({ success: false, message: "Auction has not started yet." }, { status: 403 });
       const team = auction.teams.find(t => t.accessCode === passcode);
-      
-      if (!team) {
-        return NextResponse.json({ success: false, message: "Invalid Team Code." }, { status: 401 });
-      }
+      if (!team) return NextResponse.json({ success: false, message: "Invalid Team Code." }, { status: 401 });
 
-      // SEND TEAM DATA BACK
       return NextResponse.json({ 
           success: true, 
           redirect: `/team/dashboard`,
@@ -61,17 +46,15 @@ export async function POST(request) {
               auctionName: auction.name,
               purse: team.purseBalance,
               logoUrl: team.logoUrl,
-              themeColor: team.themeColor || '#E62E2E' // NEW: Send Color
+              themeColor: team.themeColor || '#E62E2E'
           }
       });
     }
 
-    // --- LOGIC FOR SPECTATORS ---
+    // --- SPECTATOR (Fix: Pass ID in URL) ---
     if (role === 'SPECTATOR') {
-        if (auction.status === 'PENDING') {
-            return NextResponse.json({ success: false, message: "Lobby is not live yet." }, { status: 403 });
-        }
-        return NextResponse.json({ success: true, redirect: `/spectator/view` });
+        if (auction.status === 'PENDING') return NextResponse.json({ success: false, message: "Lobby is not live yet." }, { status: 403 });
+        return NextResponse.json({ success: true, redirect: `/spectator/view?id=${leagueId}` });
     }
 
     return NextResponse.json({ success: false, message: "Invalid Role" }, { status: 400 });

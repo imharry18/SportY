@@ -18,6 +18,9 @@ export async function GET(request) {
 
     if (!auction) return NextResponse.json({ success: false, message: "Not Found" }, { status: 404 });
 
+    // SORT PLAYERS BY ORDER
+    const sortedPlayers = auction.players.sort((a, b) => a.order - b.order);
+
     const formattedData = {
         name: auction.name,
         tagline: auction.theme || "", 
@@ -26,15 +29,18 @@ export async function GET(request) {
         bidIncrement: auction.bidIncrement || 'Dynamic',
         ground: auction.ground || '',
         
+        // --- FIX: Send Flux Data to prevent crash ---
+        fluxData: auction.fluxData ? JSON.parse(auction.fluxData) : { state: 'IDLE' },
+        
         teams: auction.teams.map(t => ({
             id: t.id,
             name: t.name,
             purse: t.purseBalance,
             accessCode: t.accessCode,
-            themeColor: t.themeColor || '#E62E2E', // NEW: Send Color
-            logoUrl: t.logoUrl // Ensure this is sent
+            themeColor: t.themeColor || '#E62E2E',
+            logoUrl: t.logoUrl
         })),
-        players: auction.players.map(p => ({
+        players: sortedPlayers.map(p => ({
             id: p.id,
             name: p.name,
             role: p.category, 
@@ -42,6 +48,7 @@ export async function GET(request) {
             isSold: p.isSold,
             soldPrice: p.soldPrice,
             teamId: p.teamId,
+            order: p.order, 
             image: '' 
         }))
     };

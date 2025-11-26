@@ -1,11 +1,11 @@
 'use client';
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { useRouter } from 'next/navigation';
 import Image from 'next/image';
 import { 
-  Gavel, Users, Database, Play, Pause, SkipForward, CheckCircle, 
-  XCircle, RefreshCw, DollarSign, Edit3, Trash2, Plus, Shield, Search,
-  Menu, Grid, List, UserPlus, Power
+  Gavel, Users, Database, Play, Pause, SkipForward, SkipBack, CheckCircle, 
+  XCircle, RotateCcw, Grid, Search, Edit3, Trash2, Plus, Shield, UserPlus,
+  Zap, GripVertical, Check
 } from 'lucide-react';
 import Toast from '@/components/ui/Toast';
 
@@ -13,118 +13,191 @@ export default function AdminDashboard() {
   const router = useRouter();
   
   // -- STATE --
-  const [activeTab, setActiveTab] = useState('CONSOLE'); // CONSOLE, TEAMS, MANAGE
+  const [activeTab, setActiveTab] = useState('CONSOLE'); 
   const [loading, setLoading] = useState(true);
-  const [refreshKey, setRefreshKey] = useState(0); // To trigger re-fetches
+  const [refreshKey, setRefreshKey] = useState(0); 
   const [toast, setToast] = useState(null);
 
   // Data
   const [auction, setAuction] = useState(null);
   const [teams, setTeams] = useState([]);
-  const [players, setPlayers] = useState([]); // All players
+  const [players, setPlayers] = useState([]); 
+  
+  // Flux State
+  const [showFluxModal, setShowFluxModal] = useState(false);
+  const [fluxSelection, setFluxSelection] = useState([]);
   
   // Live Auction State
   const [currentPlayerIndex, setCurrentPlayerIndex] = useState(0);
   const [currentBid, setCurrentBid] = useState(0);
-  const [currentBidder, setCurrentBidder] = useState(null); // Team ID
+  const [currentBidder, setCurrentBidder] = useState(null); 
   const [isPaused, setIsPaused] = useState(false);
 
-  // Search/Filter
   const [searchQuery, setSearchQuery] = useState('');
-
-  // Modals
   const [showPlayerModal, setShowPlayerModal] = useState(false);
   const [editingPlayer, setEditingPlayer] = useState(null);
-  const [showTeamModal, setShowTeamModal] = useState(null); // Stores team obj to show details
+  const [showTeamModal, setShowTeamModal] = useState(null);
 
-  // Helpers
   const triggerToast = (msg, type='success') => setToast({ message: msg, type });
   const formatPrice = (p) => p >= 10000000 ? `₹ ${(p/10000000).toFixed(2)} Cr` : p >= 100000 ? `₹ ${(p/100000).toFixed(2)} L` : `₹ ${p.toLocaleString()}`;
 
   // -- 1. FETCH DATA --
   useEffect(() => {
-    // In a real app, you'd get the ID from session/context. 
-    // For now, we'll try to grab the last created auction or redirect if session missing.
-    // Assuming you stored admin session or just fetching via URL query if you had one.
-    // Since we don't have the ID in URL here easily, let's fetch 'details' differently 
-    // OR: You must navigate here from Login/Setup which sets a cookie/localStorage.
-    
-    // For this code to work immediately, I will assume we fetch the ID from localStorage if available, 
-    // otherwise we might need to ask the user.
-    // Let's rely on the URL params ?id=... if you link from Setup. 
-    // BUT since this is /admin/dashboard, let's grab ID from URL search params.
-    
-    const params = new URLSearchParams(window.location.search);
-    // const id = params.get('id'); // If using URL
-    
-    // BETTER: Just use the stored auction ID from earlier steps if you have it.
-    // Fallback: We need to know WHICH auction. 
-    // For this example, I'll wrap it to get ID from window if present, else alert.
-  }, []);
+    const fetchData = async () => {
+        const params = new URLSearchParams(window.location.search);
+        const id = params.get('id'); 
 
-  const fetchData = async () => {
-    // NOTE: Replace this hardcoded fetch with your actual ID logic
-    // For now, grabbing from URL ?id=...
-    const params = new URLSearchParams(window.location.search);
-    const id = params.get('id'); 
-
-    if(!id) return; 
-
-    try {
-        const res = await fetch(`/api/auction/details?id=${id}`, { cache: 'no-store' });
-        const data = await res.json();
-        if(data.success) {
-            setAuction(data.data);
-            setTeams(data.data.teams);
-            setPlayers(data.data.players);
-            
-            // Find first unsold player for 'Current'
-            const firstUnsold = data.data.players.findIndex(p => !p.isSold);
-            if (firstUnsold !== -1) {
-                // Only reset index if we are initializing or if the current one became sold
-                setCurrentPlayerIndex(prev => {
-                    const currentP = data.data.players[prev];
-                    return currentP && !currentP.isSold ? prev : firstUnsold;
-                });
-            }
+        if(!id) {
+            setLoading(false); 
+            return; 
         }
-    } catch(e) {
-        console.error(e);
-    } finally {
-        setLoading(false);
-    }
-  };
 
-  useEffect(() => {
-      fetchData();
+        try {
+            const res = await fetch(`/api/auction/details?id=${id}`, { cache: 'no-store' });
+            const data = await res.json();
+            if(data.success) {
+                setAuction(data.data);
+                setTeams(data.data.teams);
+                // Ensure players are sorted by order
+                setPlayers(data.data.players);
+                
+                // Set initial player only once on first load
+                if(loading) {
+                    const firstUnsold = data.data.players.findIndex(p => !p.isSold);
+                    if (firstUnsold !== -1) setCurrentPlayerIndex(firstUnsold);
+                }
+            }
+        } catch(e) {
+            console.error(e);
+        } finally {
+            setLoading(false);
+        }
+    };
+    fetchData();
   }, [refreshKey]);
 
-  // Derived State
-  const unsoldPlayers = players.filter(p => !p.isSold);
   const currentPlayer = players[currentPlayerIndex];
-  
-  // -- 2. ACTIONS --
 
+  // --- DRAG AND DROP HANDLERS ---
+  const dragItem = useRef();
+  const dragOverItem = useRef();
+
+  const handleDragStart = (e, position) => {
+    dragItem.current = position;
+  };
+
+  const handleDragEnter = (e, position) => {
+    dragOverItem.current = position;
+  };
+
+  const handleDragEnd = async () => {
+    const copyListItems = [...players];
+    const dragItemContent = copyListItems[dragItem.current];
+    
+    // Remove and Insert
+    copyListItems.splice(dragItem.current, 1);
+    copyListItems.splice(dragOverItem.current, 0, dragItemContent);
+    
+    // Update Local State immediately
+    dragItem.current = null;
+    dragOverItem.current = null;
+    setPlayers(copyListItems);
+
+    // Prepare Payload for API (Update Orders)
+    const updates = copyListItems.map((p, index) => ({ id: p.id, order: index }));
+    
+    // Call API
+    await fetch('/api/admin/reorder', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ updates })
+    });
+    triggerToast("Sequence Updated");
+  };
+
+  // --- FLUX DIVIDE HANDLERS ---
+  const openFluxTool = async () => {
+      setShowFluxModal(true);
+      // Activate Flux Mode for Spectators
+      const params = new URLSearchParams(window.location.search);
+      await fetch('/api/admin/flux', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'ACTIVATE', auctionId: params.get('id') })
+      });
+  };
+
+  const toggleFluxPlayer = async (id) => {
+      const isSelected = fluxSelection.includes(id);
+      let newSelection = [];
+      
+      if (isSelected) {
+          newSelection = fluxSelection.filter(pid => pid !== id);
+      } else {
+          // Limit selection to team count
+          if (fluxSelection.length >= teams.length) {
+              return triggerToast(`Max ${teams.length} players (1 per team)`, "error");
+          }
+          newSelection = [...fluxSelection, id];
+          
+          // Trigger Silhouette on Spectator Screen for the newly clicked player
+          const params = new URLSearchParams(window.location.search);
+          await fetch('/api/admin/flux', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'FOCUS', auctionId: params.get('id'), focusPlayerId: id })
+          });
+      }
+      setFluxSelection(newSelection);
+  };
+
+  const submitFlux = async () => {
+      if (fluxSelection.length === 0) return;
+      const params = new URLSearchParams(window.location.search);
+      
+      triggerToast("Dividing Flux...");
+      const res = await fetch('/api/admin/flux', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+              action: 'EXECUTE', 
+              auctionId: params.get('id'),
+              playerIds: fluxSelection
+          })
+      });
+
+      if (res.ok) {
+          triggerToast("Unboxing initiated!");
+          setShowFluxModal(false);
+          setFluxSelection([]);
+          setRefreshKey(k => k + 1);
+      }
+  };
+
+  const closeFlux = async () => {
+      setShowFluxModal(false);
+      setFluxSelection([]);
+      const params = new URLSearchParams(window.location.search);
+      await fetch('/api/admin/flux', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ action: 'RESET', auctionId: params.get('id') })
+      });
+  };
+
+  // --- ACTIONS (Bid/Sell/Undo) ---
   const handleBid = (teamId) => {
     if (isPaused) return triggerToast("Auction is Paused!", "error");
-    if (!currentPlayer) return;
+    if (!currentPlayer || currentPlayer.isSold) return triggerToast("Player already sold/invalid", "error");
 
-    // Logic: Increment bid
-    // If first bid -> Base Price. Else -> Current + Increment
     let nextBid = 0;
     if (currentBid === 0) {
-        nextBid = currentPlayer.price; // Base price
+        nextBid = currentPlayer.price; 
     } else {
-        // Calculate Increment
-        let increment = 0;
-        if (currentBid < 10000000) increment = 500000; // 5L under 1Cr
-        else increment = 2000000; // 20L over 1Cr
-        // (You can use auction.bidIncrement logic here)
-        
+        let increment = currentBid < 10000000 ? 500000 : 2000000; 
         nextBid = currentBid + increment;
     }
 
-    // Check Team Purse
     const team = teams.find(t => t.id === teamId);
     if (team.purse < nextBid) {
         return triggerToast(`Team ${team.name} has insufficient purse!`, "error");
@@ -138,7 +211,6 @@ export default function AdminDashboard() {
   const handleSell = async () => {
     if (!currentBidder || !currentPlayer) return;
     
-    // Call API
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
 
@@ -158,24 +230,56 @@ export default function AdminDashboard() {
         triggerToast("PLAYER SOLD!");
         setCurrentBid(0);
         setCurrentBidder(null);
-        setRefreshKey(k => k + 1); // Refresh data
+        setRefreshKey(k => k + 1); 
     } else {
         triggerToast("Error selling player", "error");
     }
   };
 
+  const handleUndo = async () => {
+      if (!currentPlayer.isSold) {
+          setCurrentBid(0);
+          setCurrentBidder(null);
+          triggerToast("Bid State Reset");
+          return;
+      }
+
+      if(!confirm(`Undo sale of ${currentPlayer.name}? Money will be refunded.`)) return;
+
+      const res = await fetch('/api/admin/action', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+              action: 'UNDO_SELL',
+              playerId: currentPlayer.id
+          })
+      });
+
+      if (res.ok) {
+          triggerToast("Sale Undone successfully");
+          setRefreshKey(k => k + 1);
+      } else {
+          triggerToast("Failed to undo", "error");
+      }
+  };
+
   const handleNext = () => {
-    // Find next unsold player index relative to current
-    const nextIndex = players.findIndex((p, i) => i > currentPlayerIndex && !p.isSold);
-    if (nextIndex !== -1) {
-        setCurrentPlayerIndex(nextIndex);
+    if (currentPlayerIndex < players.length - 1) {
+        setCurrentPlayerIndex(prev => prev + 1);
         setCurrentBid(0);
         setCurrentBidder(null);
-    } else {
-        triggerToast("End of List or No Unsold Players Next", "error");
     }
   };
 
+  const handlePrev = () => {
+    if (currentPlayerIndex > 0) {
+        setCurrentPlayerIndex(prev => prev - 1);
+        setCurrentBid(0);
+        setCurrentBidder(null);
+    }
+  };
+
+  // --- CRUD PLAYERS ---
   const handleSavePlayer = async (playerData) => {
     const params = new URLSearchParams(window.location.search);
     const id = params.get('id');
@@ -210,14 +314,11 @@ export default function AdminDashboard() {
       triggerToast("Player Deleted");
   };
 
-  // -- RENDERERS --
-
   if (loading) return <div className="min-h-screen bg-[#050505] flex items-center justify-center text-brand">LOADING...</div>;
 
   return (
     <div className="min-h-screen bg-[#050505] text-white flex flex-col font-sans">
         
-        {/* Toast */}
         <div className="fixed bottom-6 right-6 z-50 pointer-events-none">{toast && <div className="pointer-events-auto"><Toast message={toast.message} type={toast.type} onClose={() => setToast(null)} /></div>}</div>
 
         {/* --- NAVBAR --- */}
@@ -228,8 +329,6 @@ export default function AdminDashboard() {
                 <div className="h-6 w-px bg-white/10 mx-2"></div>
                 <span className="text-xs text-white/40 font-mono hidden md:inline-block">{auction?.name}</span>
             </div>
-            
-            {/* Tab Switcher */}
             <div className="flex bg-white/5 p-1 rounded-lg">
                 {[
                     { id: 'CONSOLE', icon: Gavel, label: 'Live Console' },
@@ -254,15 +353,29 @@ export default function AdminDashboard() {
             {activeTab === 'CONSOLE' && (
                 <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 h-full">
                     
-                    {/* LEFT: Player Card (4 Cols) */}
+                    {/* LEFT: Player Card & Controls (4 Cols) */}
                     <div className="lg:col-span-4 flex flex-col gap-4">
+                        
+                        {/* Power Tool Bar */}
+                        <div className="flex justify-between items-center bg-white/5 p-3 rounded-xl border border-white/10">
+                            <div className="flex items-center gap-2">
+                                <Zap className="w-4 h-4 text-purple-500" />
+                                <span className="text-[10px] text-white/40 uppercase font-bold tracking-widest">Power Tools</span>
+                            </div>
+                            <button 
+                                onClick={openFluxTool}
+                                className="flex items-center gap-2 px-3 py-1.5 bg-purple-600 hover:bg-purple-500 text-white rounded-lg text-[10px] font-bold uppercase tracking-widest shadow-[0_0_15px_rgba(147,51,234,0.3)] transition-all"
+                            >
+                                FluxDivide
+                            </button>
+                        </div>
+
+                        {/* Player Card */}
                         <div className="flex-1 bg-[#0a0a0a] border border-white/10 rounded-2xl p-6 relative overflow-hidden flex flex-col items-center text-center shadow-2xl">
-                            {/* Status Tag */}
-                            <div className={`absolute top-4 right-4 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest ${isPaused ? 'border-yellow-500/50 text-yellow-500 bg-yellow-500/10' : 'border-green-500/50 text-green-500 bg-green-500/10 animate-pulse'}`}>
-                                {isPaused ? 'Paused' : 'Live'}
+                            <div className={`absolute top-4 right-4 px-3 py-1 rounded-full border text-[10px] font-bold uppercase tracking-widest ${currentPlayer?.isSold ? 'border-red-500/50 text-red-500 bg-red-500/10' : 'border-green-500/50 text-green-500 bg-green-500/10'}`}>
+                                {currentPlayer?.isSold ? 'SOLD' : (isPaused ? 'Paused' : 'Live')}
                             </div>
 
-                            {/* Player Image */}
                             <div className="w-48 h-48 rounded-2xl bg-white/5 border border-white/10 mb-6 relative overflow-hidden group">
                                 {currentPlayer?.image ? (
                                     <Image src={currentPlayer.image} fill className="object-cover" alt="Player" />
@@ -271,9 +384,8 @@ export default function AdminDashboard() {
                                 )}
                             </div>
 
-                            {/* Details */}
-                            <h2 className="text-3xl font-tech font-bold text-white uppercase tracking-tight">{currentPlayer?.name || "No Player"}</h2>
-                            <p className="text-brand font-mono text-sm mt-1 uppercase tracking-widest">{currentPlayer?.role || "Waiting..."}</p>
+                            <h2 className="text-3xl font-tech font-bold text-white uppercase tracking-tight">{currentPlayer?.name || "End of List"}</h2>
+                            <p className="text-brand font-mono text-sm mt-1 uppercase tracking-widest">{currentPlayer?.role}</p>
                             
                             <div className="mt-8 grid grid-cols-2 gap-4 w-full">
                                 <div className="bg-white/5 p-3 rounded-xl border border-white/5">
@@ -282,36 +394,45 @@ export default function AdminDashboard() {
                                 </div>
                                 <div className="bg-brand/10 p-3 rounded-xl border border-brand/20">
                                     <p className="text-[10px] text-brand/60 uppercase font-bold">Current Bid</p>
-                                    <p className="text-xl font-mono text-brand font-bold">{formatPrice(currentBid)}</p>
+                                    <p className="text-xl font-mono text-brand font-bold">
+                                        {currentPlayer?.isSold ? formatPrice(currentPlayer.soldPrice) : formatPrice(currentBid)}
+                                    </p>
                                 </div>
                             </div>
 
-                            {/* Leading Team */}
-                            {currentBidder && (
+                            {(currentBidder || currentPlayer?.isSold) && (
                                 <div className="mt-4 w-full bg-white/5 border border-white/10 p-3 rounded-xl flex items-center justify-between">
-                                    <span className="text-[10px] text-white/40 uppercase font-bold">Winning:</span>
-                                    <span className="text-sm font-bold text-white uppercase">{teams.find(t => t.id === currentBidder)?.name}</span>
+                                    <span className="text-[10px] text-white/40 uppercase font-bold">
+                                        {currentPlayer?.isSold ? 'Sold To:' : 'Winning:'}
+                                    </span>
+                                    <span className="text-sm font-bold text-white uppercase">
+                                        {teams.find(t => t.id === (currentPlayer?.teamId || currentBidder))?.name}
+                                    </span>
                                 </div>
                             )}
                         </div>
 
                         {/* Control Bar */}
-                        <div className="grid grid-cols-4 gap-2">
+                        <div className="grid grid-cols-5 gap-2">
+                            <button onClick={handlePrev} disabled={currentPlayerIndex === 0} className="p-4 rounded-xl border border-white/10 bg-[#0a0a0a] text-white hover:bg-white/5 flex flex-col items-center justify-center gap-2 transition-all disabled:opacity-30">
+                                <SkipBack className="w-5 h-5" />
+                                <span className="text-[9px] font-bold uppercase">Prev</span>
+                            </button>
                             <button onClick={() => setIsPaused(!isPaused)} className={`p-4 rounded-xl border flex flex-col items-center justify-center gap-2 transition-all ${isPaused ? 'bg-green-500/10 border-green-500/50 text-green-500' : 'bg-yellow-500/10 border-yellow-500/50 text-yellow-500'}`}>
                                 {isPaused ? <Play className="w-5 h-5" /> : <Pause className="w-5 h-5" />}
-                                <span className="text-[10px] font-bold uppercase">{isPaused ? "Resume" : "Pause"}</span>
+                                <span className="text-[9px] font-bold uppercase">{isPaused ? "Resume" : "Pause"}</span>
                             </button>
-                            <button onClick={() => triggerToast("Marked Unsold")} className="p-4 rounded-xl border border-white/10 bg-[#0a0a0a] text-white/40 hover:text-white hover:bg-white/5 flex flex-col items-center justify-center gap-2 transition-all">
-                                <XCircle className="w-5 h-5" />
-                                <span className="text-[10px] font-bold uppercase">Unsold</span>
+                            <button onClick={handleUndo} className="p-4 rounded-xl border border-red-900/30 bg-red-950/20 text-red-400 hover:bg-red-900/40 flex flex-col items-center justify-center gap-2 transition-all">
+                                <RotateCcw className="w-5 h-5" />
+                                <span className="text-[9px] font-bold uppercase">Undo</span>
                             </button>
-                            <button onClick={handleSell} disabled={!currentBidder} className="p-4 rounded-xl border border-green-500 bg-green-600 text-white hover:bg-green-500 flex flex-col items-center justify-center gap-2 transition-all disabled:opacity-50 disabled:grayscale">
+                            <button onClick={handleSell} disabled={!currentBidder || currentPlayer?.isSold} className="p-4 rounded-xl border border-green-500 bg-green-600 text-white hover:bg-green-500 flex flex-col items-center justify-center gap-2 transition-all disabled:opacity-30 disabled:grayscale">
                                 <Gavel className="w-5 h-5" />
-                                <span className="text-[10px] font-bold uppercase">Sold</span>
+                                <span className="text-[9px] font-bold uppercase">Sold</span>
                             </button>
-                            <button onClick={handleNext} className="p-4 rounded-xl border border-white/10 bg-white text-black hover:bg-gray-200 flex flex-col items-center justify-center gap-2 transition-all">
+                            <button onClick={handleNext} disabled={currentPlayerIndex === players.length - 1} className="p-4 rounded-xl border border-white/10 bg-white text-black hover:bg-gray-200 flex flex-col items-center justify-center gap-2 transition-all disabled:opacity-30">
                                 <SkipForward className="w-5 h-5" />
-                                <span className="text-[10px] font-bold uppercase">Next</span>
+                                <span className="text-[9px] font-bold uppercase">Next</span>
                             </button>
                         </div>
                     </div>
@@ -330,7 +451,7 @@ export default function AdminDashboard() {
                                 <button 
                                     key={team.id}
                                     onClick={() => handleBid(team.id)}
-                                    disabled={team.purse < (currentBid || currentPlayer?.price)}
+                                    disabled={team.purse < (currentBid || currentPlayer?.price) || currentPlayer?.isSold}
                                     className={`relative p-4 rounded-xl border flex flex-col items-center gap-3 transition-all active:scale-95 group ${currentBidder === team.id ? 'bg-brand border-brand' : 'bg-white/5 border-white/10 hover:border-white/30'} disabled:opacity-30 disabled:pointer-events-none`}
                                 >
                                     <div className="w-12 h-12 rounded-full bg-black/20 flex items-center justify-center overflow-hidden border border-white/10">
@@ -381,10 +502,9 @@ export default function AdminDashboard() {
                 </div>
             )}
 
-            {/* === TAB 3: DATABASE (Manage Players) === */}
+            {/* === TAB 3: DATABASE (Manage & Reorder Players) === */}
             {activeTab === 'MANAGE' && (
                 <div className="bg-[#0a0a0a] border border-white/10 rounded-2xl overflow-hidden flex flex-col h-full animate-in fade-in">
-                    {/* Toolbar */}
                     <div className="p-4 border-b border-white/10 flex flex-col md:flex-row gap-4 justify-between items-center bg-white/[0.02]">
                         <div className="relative w-full md:w-64">
                             <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-white/30" />
@@ -401,45 +521,36 @@ export default function AdminDashboard() {
                         </button>
                     </div>
 
-                    {/* Table */}
-                    <div className="flex-1 overflow-auto">
-                        <table className="w-full text-left text-sm text-white/70">
-                            <thead className="bg-white/5 text-white/30 text-[10px] uppercase font-bold sticky top-0 backdrop-blur-sm">
-                                <tr>
-                                    <th className="px-6 py-3">Player</th>
-                                    <th className="px-6 py-3">Role</th>
-                                    <th className="px-6 py-3">Status</th>
-                                    <th className="px-6 py-3 text-right">Price</th>
-                                    <th className="px-6 py-3 text-right">Actions</th>
-                                </tr>
-                            </thead>
-                            <tbody className="divide-y divide-white/5">
-                                {players.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).map(p => (
-                                    <tr key={p.id} className="hover:bg-white/[0.02] transition-colors group">
-                                        <td className="px-6 py-3 font-medium text-white">{p.name}</td>
-                                        <td className="px-6 py-3 text-xs">{p.role}</td>
-                                        <td className="px-6 py-3">
-                                            {p.isSold ? (
-                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-green-900/30 text-green-400 text-[10px] font-bold uppercase border border-green-900/50">
-                                                    Sold to {teams.find(t => t.id === p.teamId)?.name}
-                                                </span>
-                                            ) : (
-                                                <span className="inline-flex items-center gap-1.5 px-2 py-0.5 rounded bg-white/5 text-white/40 text-[10px] font-bold uppercase border border-white/10">
-                                                    Unsold
-                                                </span>
-                                            )}
-                                        </td>
-                                        <td className="px-6 py-3 text-right font-mono text-brand text-xs">
-                                            {p.isSold ? formatPrice(p.soldPrice) : formatPrice(p.price)}
-                                        </td>
-                                        <td className="px-6 py-3 text-right flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
-                                            <button onClick={() => { setEditingPlayer(p); setShowPlayerModal(true); }} className="p-1.5 bg-white/10 hover:bg-white hover:text-black rounded transition-colors"><Edit3 className="w-3 h-3" /></button>
-                                            <button onClick={() => handleDelete(p.id)} className="p-1.5 bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white rounded transition-colors"><Trash2 className="w-3 h-3" /></button>
-                                        </td>
-                                    </tr>
-                                ))}
-                            </tbody>
-                        </table>
+                    <div className="flex-1 overflow-auto p-4 space-y-2">
+                        {players.filter(p => p.name.toLowerCase().includes(searchQuery.toLowerCase())).map((p, index) => (
+                            <div 
+                                key={p.id}
+                                draggable={!searchQuery} // Disable drag when searching
+                                onDragStart={(e) => handleDragStart(e, index)}
+                                onDragEnter={(e) => handleDragEnter(e, index)}
+                                onDragEnd={handleDragEnd}
+                                onDragOver={(e) => e.preventDefault()}
+                                className={`flex items-center justify-between p-3 rounded-lg border border-white/5 ${p.isSold ? 'bg-white/[0.02] opacity-50' : 'bg-[#111] hover:bg-white/[0.05] cursor-grab active:cursor-grabbing'}`}
+                            >
+                                <div className="flex items-center gap-4">
+                                    {!searchQuery && <div className="p-2 text-white/20"><GripVertical className="w-4 h-4" /></div>}
+                                    <div className="w-8 h-8 bg-white/10 rounded overflow-hidden relative">
+                                        {p.image ? <Image src={p.image} fill className="object-cover" alt="img" /> : <Users className="w-4 h-4 m-2 text-white/20"/>}
+                                    </div>
+                                    <div>
+                                        <div className="text-sm font-bold text-white">{p.name}</div>
+                                        <div className="text-[10px] text-white/40 font-mono uppercase">{p.role} • {formatPrice(p.price)}</div>
+                                    </div>
+                                </div>
+                                <div className="flex items-center gap-6">
+                                    <div className="text-[10px] font-mono text-white/20">SEQ: {index + 1}</div>
+                                    <div className="flex gap-2">
+                                        <button onClick={() => { setEditingPlayer(p); setShowPlayerModal(true); }} className="p-1.5 bg-white/10 hover:bg-white hover:text-black rounded transition-colors"><Edit3 className="w-3 h-3" /></button>
+                                        <button onClick={() => handleDelete(p.id)} className="p-1.5 bg-red-900/20 text-red-500 hover:bg-red-600 hover:text-white rounded transition-colors"><Trash2 className="w-3 h-3" /></button>
+                                    </div>
+                                </div>
+                            </div>
+                        ))}
                     </div>
                 </div>
             )}
@@ -448,7 +559,57 @@ export default function AdminDashboard() {
 
         {/* --- MODALS --- */}
         
-        {/* ADD/EDIT PLAYER MODAL */}
+        {/* FLUX MODAL */}
+        {showFluxModal && (
+           <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/90 backdrop-blur-md animate-in fade-in">
+               <div className="bg-[#0f0f11] border border-purple-500/30 rounded-2xl w-full max-w-4xl h-[80vh] flex flex-col relative shadow-[0_0_50px_rgba(147,51,234,0.1)]">
+                   <div className="p-6 border-b border-white/10 flex justify-between items-center">
+                       <div>
+                           <h2 className="text-2xl font-tech font-bold text-white uppercase flex items-center gap-3">
+                               <Zap className="w-6 h-6 text-purple-500" /> Flux Divide
+                           </h2>
+                           <p className="text-xs text-white/40 mt-1">Select {teams.length} players to randomly distribute.</p>
+                       </div>
+                       <button onClick={closeFlux} className="p-2 hover:bg-white/10 rounded-full text-white/40 hover:text-white"><XCircle className="w-6 h-6" /></button>
+                   </div>
+                   
+                   <div className="flex-1 overflow-y-auto p-6 grid grid-cols-2 md:grid-cols-4 gap-4">
+                       {players.filter(p => !p.isSold).map(p => {
+                           const isSelected = fluxSelection.includes(p.id);
+                           return (
+                               <div 
+                                   key={p.id} 
+                                   onClick={() => toggleFluxPlayer(p.id)}
+                                   className={`relative p-4 rounded-xl border cursor-pointer transition-all ${isSelected ? 'bg-purple-500/20 border-purple-500' : 'bg-white/5 border-white/10 hover:border-white/30'}`}
+                               >
+                                   {isSelected && <div className="absolute top-2 right-2 w-5 h-5 bg-purple-500 rounded-full flex items-center justify-center"><Check className="w-3 h-3 text-white" /></div>}
+                                   <div className="w-full aspect-square bg-black/30 rounded-lg mb-3 overflow-hidden relative">
+                                       {p.image ? <Image src={p.image} fill className="object-cover" alt={p.name} /> : <Users className="w-8 h-8 absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 text-white/20"/>}
+                                   </div>
+                                   <div className="text-center">
+                                       <div className="font-bold text-sm text-white truncate">{p.name}</div>
+                                       <div className="text-[10px] text-white/40 uppercase">{p.role}</div>
+                                   </div>
+                               </div>
+                           )
+                       })}
+                   </div>
+
+                   <div className="p-6 border-t border-white/10 flex justify-between items-center bg-[#0a0a0a]">
+                       <div className="text-sm font-bold text-white/60">Selected: <span className="text-purple-400">{fluxSelection.length}</span> / {teams.length}</div>
+                       <button 
+                           onClick={submitFlux}
+                           disabled={fluxSelection.length === 0}
+                           className="px-8 py-3 bg-purple-600 hover:bg-purple-500 text-white font-bold uppercase tracking-widest rounded-lg shadow-lg disabled:opacity-50 disabled:cursor-not-allowed"
+                       >
+                           Initialize Flux
+                       </button>
+                   </div>
+               </div>
+           </div>
+       )}
+
+        {/* ADD/EDIT PLAYER MODAL (Existing) */}
         {showPlayerModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-in fade-in">
                 <div className="bg-[#0f0f11] border border-white/10 rounded-2xl p-8 w-full max-w-md relative shadow-2xl">
@@ -493,7 +654,7 @@ export default function AdminDashboard() {
             </div>
         )}
 
-        {/* TEAM DETAIL MODAL */}
+        {/* TEAM DETAIL MODAL (Existing) */}
         {showTeamModal && (
             <div className="fixed inset-0 z-[100] flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-in fade-in" onClick={() => setShowTeamModal(null)}>
                 <div className="bg-[#0f0f11] border border-white/10 rounded-2xl w-full max-w-lg relative shadow-2xl overflow-hidden" onClick={e => e.stopPropagation()}>

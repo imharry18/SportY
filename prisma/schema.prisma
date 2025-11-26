@@ -51,7 +51,31 @@ model Team {
   owner        User[]
   players      Player[]
 }
+// prisma/schema.prisma
 
+// ... User & Team models ...
+
+
+
+model Auction {
+  id          String   @id @default(uuid())
+  name        String
+  logoUrl     String?
+  budget      Float
+  status      String   @default("PENDING")
+  passcode    String
+  theme       String?
+  ground      String?
+  bidIncrement String? @default("Dynamic")
+  eventDate   DateTime?
+  
+  // NEW: Stores the state of the FluxDivide animation (JSON String)
+  fluxData    String?  @default("{}") 
+
+  teams       Team[]
+  players     Player[]
+  createdAt   DateTime @default(now())
+}
 // prisma/schema.prisma
 
 model Player {
@@ -62,35 +86,15 @@ model Player {
   soldPrice     Float?
   isSold        Boolean  @default(false)
   
-  // Link to Team (When sold)
+  // NEW: Order for auction sequence
+  order         Int      @default(0) 
+
   teamId        String?
   team          Team?    @relation(fields: [teamId], references: [id])
-
-  // NEW: Link to Auction (The pool they belong to)
   auctionId     String?
   auction       Auction? @relation(fields: [auctionId], references: [id])
 }
 
-model Auction {
-  id           String   @id @default(uuid())
-  name         String
-  logoUrl      String?
-  budget       Float
-  status       String   @default("PENDING")
-  passcode     String
-  theme        String?
-  eventDate    DateTime?
-  
-  // --- NEW FIELDS ---
-  ground       String?
-  bidIncrement String?  @default("Dynamic")
-  // ------------------
-
-  teams        Team[]
-  players      Player[]
-  
-  createdAt    DateTime @default(now())
-}
 
 // ... User and Team models remain the same
 
