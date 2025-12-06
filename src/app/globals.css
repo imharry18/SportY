@@ -1,3 +1,25 @@
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
+
+@layer base {
+  body {
+    @apply bg-dark-bg text-dark-text antialiased selection:bg-brand/30;
+  }
+}
+
+/* Scrollbar - Minimal & Dark */
+::-webkit-scrollbar {
+  width: 6px;
+}
+::-webkit-scrollbar-track {
+  @apply bg-dark-bg;
+}
+::-webkit-scrollbar-thumb {
+  @apply bg-dark-border rounded-full hover:bg-dark-muted;
+}
+
+/* Utility for glass effects */
+.glass-panel {
+  @apply bg-dark-surface/80 backdrop-blur-xl border border-dark-border;
+}
