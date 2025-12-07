@@ -1,0 +1,50 @@
+// prisma/schema.prisma
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// 1. User Roles (Admin, Team Owner, Spectator)
+enum Role {
+  ADMIN
+  TEAM_OWNER
+  SPECTATOR
+}
+
+// 2. The User Model (Login Info)
+model User {
+  id        String   @id @default(uuid())
+  email     String   @unique
+  password  String   // Hashed
+  role      Role     @default(SPECTATOR)
+  teamId    String?  // If they own a team
+  team      Team?    @relation(fields: [teamId], references: [id])
+  createdAt DateTime @default(now())
+}
+
+// 3. The Team Model (Wallet & Roster)
+model Team {
+  id            String   @id @default(uuid())
+  name          String
+  purseBalance  Float    @default(50000000) // Example: 50 Crore
+  logoUrl       String?
+  owner         User[]
+  players       Player[] // Players won by this team
+}
+
+// 4. The Player Model (The Asset)
+model Player {
+  id            String   @id @default(uuid())
+  name          String
+  category      String   // Batsman, Bowler, etc.
+  basePrice     Float
+  soldPrice     Float?
+  isSold        Boolean  @default(false)
+  teamId        String?
+  team          Team?    @relation(fields: [teamId], references: [id])
+}

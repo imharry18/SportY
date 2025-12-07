@@ -1,6 +1,6 @@
 'use client';
 import Link from 'next/link';
-import { Gavel, Wallet, Zap, Server, Users, ShieldCheck } from 'lucide-react';
+import { Gavel, Wallet, Zap, Server, Users, ShieldCheck, PlusCircle } from 'lucide-react';
 
 export default function AuctionShowcase() {
   return (
@@ -32,16 +32,29 @@ export default function AuctionShowcase() {
                 </p>
             </div>
 
-            {/* CTA BUTTON - Matching 'Organize Event' Style */}
-            <Link href="/auction-room" className="group w-fit mt-2">
-                <button className="relative px-10 py-5 bg-white text-black cut-corners-sm overflow-hidden transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_50px_rgba(230,46,46,0.4)]">
-                    <div className="absolute inset-0 bg-brand translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
-                    <div className="relative z-10 flex items-center gap-4">
-                        <Gavel className="w-6 h-6 group-hover:text-white group-hover:rotate-[-12deg] transition-all" />
-                        <span className="font-tech font-bold text-xl uppercase tracking-widest group-hover:text-white transition-colors">Enter Lobby</span>
-                    </div>
-                </button>
-            </Link>
+            {/* ACTION BUTTONS */}
+            <div className="flex flex-col sm:flex-row gap-4 mt-2">
+                {/* 1. Join Auction Button */}
+                <Link href="/join-auction" className="group flex-1 sm:flex-none">
+                    <button className="w-full sm:w-auto relative px-8 py-4 bg-white text-black cut-corners-sm overflow-hidden transition-transform hover:scale-105 active:scale-95 shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_50px_rgba(230,46,46,0.4)]">
+                        <div className="absolute inset-0 bg-brand translate-y-full group-hover:translate-y-0 transition-transform duration-300 ease-out"></div>
+                        <div className="relative z-10 flex items-center justify-center gap-3">
+                            <Users className="w-5 h-5 group-hover:text-white transition-colors" />
+                            <span className="font-tech font-bold text-lg uppercase tracking-widest group-hover:text-white transition-colors">Join Auction</span>
+                        </div>
+                    </button>
+                </Link>
+
+                {/* 2. Create Auction Button */}
+                <Link href="/create-auction" className="group flex-1 sm:flex-none">
+                    <button className="w-full sm:w-auto relative px-8 py-4 bg-transparent border border-white/20 text-white cut-corners-sm overflow-hidden transition-transform hover:scale-105 active:scale-95 hover:bg-white/5 hover:border-brand/50">
+                        <div className="relative z-10 flex items-center justify-center gap-3">
+                            <PlusCircle className="w-5 h-5 text-brand group-hover:text-white transition-colors" />
+                            <span className="font-tech font-bold text-lg uppercase tracking-widest group-hover:text-brand-glow transition-colors">Create Auction</span>
+                        </div>
+                    </button>
+                </Link>
+            </div>
 
             {/* Feature List */}
             <div className="grid grid-cols-2 gap-6 mt-6 border-t border-white/10 pt-8">

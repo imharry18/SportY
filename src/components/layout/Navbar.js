@@ -42,10 +42,11 @@ export default function Navbar() {
           </nav>
           
           <div className="h-8 w-px bg-white/10 hidden md:block"></div>
-          
-          <button className="px-8 py-2 cut-corners-sm bg-white text-black font-tech font-bold text-sm uppercase tracking-widest hover:bg-brand hover:text-white transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(230,46,46,0.4)]">
-            Login
-          </button>
+          <Link href="/login"k>
+            <button className="px-8 py-2 cut-corners-sm bg-white text-black font-tech font-bold text-sm uppercase tracking-widest hover:bg-brand hover:text-white transition-all shadow-[0_0_20px_rgba(255,255,255,0.1)] hover:shadow-[0_0_30px_rgba(230,46,46,0.4)]">
+              Login
+            </button>
+          </Link>
         </div>
       </div>
     </header>
