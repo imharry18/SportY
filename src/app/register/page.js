@@ -1,76 +1,129 @@
-// Add these fields to your state
-const [form, setForm] = useState({ 
-  email: '', password: '', confirmPassword: '',
-  fullName: '', age: '', playerRole: 'Batsman', battingStyle: 'Right-hand', bowlingStyle: 'None'
-});
+'use client';
+import { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import Image from 'next/image';
+import Link from 'next/link';
 
-// ... Inside your form JSX, add these inputs BEFORE the email input ...
+export default function RegisterPage() {
+  const router = useRouter();
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  
+  const [form, setForm] = useState({ 
+    email: '', 
+    password: '', 
+    confirmPassword: ''
+  });
 
-{/* Full Name */}
-<div className="space-y-1">
-  <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest pl-1">Full Name</label>
-  <input 
-    type="text" 
-    placeholder="e.g. Virat Kohli"
-    value={form.fullName}
-    onChange={(e) => setForm({...form, fullName: e.target.value})}
-    className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white placeholder:text-white/20 focus:outline-none focus:border-cyan-500/50 transition-all font-clean text-sm"
-    required
-  />
-</div>
+  const handleRegister = async (e) => {
+    e.preventDefault();
+    setError('');
 
-{/* Age & Role Row */}
-<div className="grid grid-cols-2 gap-4">
-    <div className="space-y-1">
-      <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest pl-1">Age</label>
-      <input 
-        type="number" 
-        value={form.age}
-        onChange={(e) => setForm({...form, age: e.target.value})}
-        className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500/50 transition-all text-sm"
-        required
-      />
-    </div>
-    <div className="space-y-1">
-      <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest pl-1">Role</label>
-      <select 
-        value={form.playerRole}
-        onChange={(e) => setForm({...form, playerRole: e.target.value})}
-        className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500/50 transition-all text-sm appearance-none"
-      >
-        <option>Batsman</option>
-        <option>Bowler</option>
-        <option>All-Rounder</option>
-        <option>Wicketkeeper</option>
-      </select>
-    </div>
-</div>
+    if (form.password !== form.confirmPassword) {
+      setError("Passwords do not match.");
+      return;
+    }
 
-{/* Styles Row */}
-<div className="grid grid-cols-2 gap-4">
-    <div className="space-y-1">
-      <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest pl-1">Batting Style</label>
-      <select 
-        value={form.battingStyle}
-        onChange={(e) => setForm({...form, battingStyle: e.target.value})}
-        className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500/50 transition-all text-sm"
-      >
-        <option>Right-hand</option>
-        <option>Left-hand</option>
-      </select>
+    setLoading(true);
+
+    try {
+      const res = await fetch('/api/auth/register', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+            email: form.email,
+            password: form.password
+        }),
+      });
+
+      const data = await res.json();
+
+      if (res.ok) {
+        alert("Account created successfully! Please log in.");
+        router.push('/login');
+      } else {
+        setError(data.message || 'Registration failed');
+      }
+    } catch (err) {
+      setError('Connection error. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen w-full bg-[#050505] text-white font-sans flex items-center justify-center relative overflow-hidden py-10">
+      
+      {/* Background Ambience */}
+      <div className="fixed inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.04] pointer-events-none mix-blend-overlay"></div>
+      <div className="fixed bottom-0 right-0 w-[600px] h-[600px] bg-red-600/5 rounded-full blur-[150px] pointer-events-none"></div>
+
+      <div className="w-full max-w-sm p-6 relative z-10">
+        <div className="bg-black border border-white/10 rounded-2xl p-8 shadow-2xl relative">
+          
+          <div className="flex flex-col items-center mb-6">
+             {/* Logo */}
+             <div className="w-10 h-10 relative mb-4">
+               <Image src="/logo.png" alt="SportY" fill className="object-contain" />
+             </div>
+            <h1 className="text-xl font-bold text-white tracking-tight uppercase">Create Account</h1>
+            <p className="text-gray-500 text-xs mt-1">Join the ecosystem.</p>
+          </div>
+
+          <form onSubmit={handleRegister} className="space-y-4">
+            {error && <div className="p-3 bg-red-900/20 border border-red-500/20 rounded text-red-400 text-xs text-center font-bold">{error}</div>}
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Email</label>
+              <input 
+                type="email" 
+                value={form.email} 
+                onChange={(e) => setForm({...form, email: e.target.value})} 
+                className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-600 transition-all text-sm" 
+                required 
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Password</label>
+              <input 
+                type="password" 
+                value={form.password} 
+                onChange={(e) => setForm({...form, password: e.target.value})} 
+                className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-600 transition-all text-sm" 
+                required 
+              />
+            </div>
+
+            <div className="space-y-1">
+              <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest pl-1">Confirm Password</label>
+              <input 
+                type="password" 
+                value={form.confirmPassword} 
+                onChange={(e) => setForm({...form, confirmPassword: e.target.value})} 
+                className="w-full bg-[#111] border border-white/10 rounded-lg px-4 py-3 text-white focus:outline-none focus:border-red-600 transition-all text-sm" 
+                required 
+              />
+            </div>
+
+            <button 
+              type="submit" 
+              disabled={loading}
+              className="w-full py-3 mt-2 bg-white text-black font-bold text-xs uppercase tracking-widest hover:bg-gray-200 transition-all disabled:opacity-50"
+              style={{ clipPath: 'polygon(10px 0, 100% 0, 100% calc(100% - 10px), calc(100% - 10px) 100%, 0 100%, 0 10px)' }}
+            >
+              {loading ? 'Processing...' : 'Register'}
+            </button>
+          </form>
+
+          <div className="text-center mt-6">
+            <Link href="/login" className="text-xs text-gray-500 hover:text-white transition-colors uppercase tracking-wider font-bold">
+              Back to Login
+            </Link>
+          </div>
+
+        </div>
+      </div>
     </div>
-    <div className="space-y-1">
-      <label className="text-[10px] font-bold text-white/30 uppercase tracking-widest pl-1">Bowling Style</label>
-      <select 
-        value={form.bowlingStyle}
-        onChange={(e) => setForm({...form, bowlingStyle: e.target.value})}
-        className="w-full bg-[#050505] border border-white/10 rounded-xl px-4 py-3 text-white focus:outline-none focus:border-cyan-500/50 transition-all text-sm"
-      >
-        <option>None</option>
-        <option>Right-arm Fast</option>
-        <option>Right-arm Spin</option>
-        <option>Left-arm Fast</option>
-        <option>Left-arm Spin</option>
-      </select>
-    </div>
-</div>
+  );
+}

@@ -4,27 +4,25 @@ import prisma from '@/lib/db/prisma';
 export async function POST(request) {
   try {
     const body = await request.json();
-    // Destructure all the new fields
-    const { email, password, fullName, age, playerRole, battingStyle, bowlingStyle } = body;
+    const { email, password } = body;
 
+    if (!email || !password) {
+      return NextResponse.json({ success: false, message: "Missing fields" }, { status: 400 });
+    }
+
+    // 1. Check existing
     const existingUser = await prisma.user.findUnique({ where: { email } });
     if (existingUser) {
       return NextResponse.json({ success: false, message: "User already exists" }, { status: 400 });
     }
 
+    // 2. Create User (Minimal Data)
     const newUser = await prisma.user.create({
       data: {
         email,
         password,
-        fullName,
-        age: parseInt(age),
-        role: "PLAYER", // Defaulting to PLAYER now
-        playerRole,
-        battingStyle,
-        bowlingStyle,
-        matches: 0,
-        runs: 0,
-        wickets: 0
+        role: "PLAYER", // Default role
+        // All other fields are null/0 by default from schema
       }
     });
 
@@ -33,6 +31,7 @@ export async function POST(request) {
 
   } catch (error) {
     console.error("Registration Error:", error);
-    return NextResponse.json({ success: false, message: "Server error" }, { status: 500 });
+    // This logs the real error to your VS Code terminal so you can see it
+    return NextResponse.json({ success: false, message: "Server error: " + error.message }, { status: 500 });
   }
 }

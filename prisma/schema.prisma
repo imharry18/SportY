@@ -1,3 +1,5 @@
+// prisma/schema.prisma
+
 generator client {
   provider = "prisma-client-js"
 }
@@ -11,14 +13,18 @@ model User {
   id            String   @id @default(uuid())
   email         String   @unique
   password      String
-  fullName      String?
-  role          String   @default("PLAYER") // Options: ADMIN, TEAM_OWNER, PLAYER
   
-  // Cricketer Specific Stats
-  playerRole    String?  // Batsman, Bowler, All-Rounder, Wicketkeeper
-  battingStyle  String?  // Right-hand, Left-hand
-  bowlingStyle  String?  // Right-arm Fast, Leg Spin, etc.
+  // Make these OPTIONAL by adding '?'
+  fullName      String?
+  role          String   @default("PLAYER") 
+  
+  // Cricketer Details (All Optional for now)
   age           Int?
+  playerRole    String?
+  battingStyle  String?
+  bowlingStyle  String?
+  
+  // Stats (Default to 0 is fine)
   matches       Int      @default(0)
   runs          Int      @default(0)
   wickets       Int      @default(0)
@@ -28,19 +34,20 @@ model User {
   createdAt     DateTime @default(now())
 }
 
+// ... Keep Team, Player, and Auction models same as before
 model Team {
   id            String   @id @default(uuid())
   name          String
   purseBalance  Float    @default(50000000)
   logoUrl       String?
   owner         User[]
-  players       Player[] 
+  players       Player[]
 }
 
 model Player {
   id            String   @id @default(uuid())
   name          String
-  category      String   
+  category      String
   basePrice     Float
   soldPrice     Float?
   isSold        Boolean  @default(false)
@@ -50,9 +57,9 @@ model Player {
 
 model Auction {
   id          String   @id @default(uuid())
-  name        String   
-  budget      Float    
-  status      String   @default("PENDING") 
-  passcode    String   
+  name        String
+  budget      Float
+  status      String   @default("PENDING")
+  passcode    String
   createdAt   DateTime @default(now())
 }

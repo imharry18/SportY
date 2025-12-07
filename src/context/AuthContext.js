@@ -8,8 +8,8 @@ export function AuthProvider({ children }) {
   const [user, setUser] = useState(null);
   const router = useRouter();
 
-  // Check if user is logged in when app starts
   useEffect(() => {
+    // Check for saved user on load
     const storedUser = localStorage.getItem('sporty_user');
     if (storedUser) {
       setUser(JSON.parse(storedUser));
