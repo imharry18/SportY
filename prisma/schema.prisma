@@ -1,14 +1,21 @@
-// prisma/schema.prisma
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
 
 model User {
   id            String   @id @default(uuid())
   email         String   @unique
   password      String
-  fullName      String?  // New
-  role          String   @default("SPECTATOR") // TEAM_OWNER, ADMIN, PLAYER
+  fullName      String?
+  role          String   @default("PLAYER") // Options: ADMIN, TEAM_OWNER, PLAYER
   
-  // Cricketer Specific Details
-  playerRole    String?  // Batsman, Bowler, All-Rounder
+  // Cricketer Specific Stats
+  playerRole    String?  // Batsman, Bowler, All-Rounder, Wicketkeeper
   battingStyle  String?  // Right-hand, Left-hand
   bowlingStyle  String?  // Right-arm Fast, Leg Spin, etc.
   age           Int?
@@ -21,4 +28,31 @@ model User {
   createdAt     DateTime @default(now())
 }
 
-// ... keep your other models (Team, Player, Auction) as they were
+model Team {
+  id            String   @id @default(uuid())
+  name          String
+  purseBalance  Float    @default(50000000)
+  logoUrl       String?
+  owner         User[]
+  players       Player[] 
+}
+
+model Player {
+  id            String   @id @default(uuid())
+  name          String
+  category      String   
+  basePrice     Float
+  soldPrice     Float?
+  isSold        Boolean  @default(false)
+  teamId        String?
+  team          Team?    @relation(fields: [teamId], references: [id])
+}
+
+model Auction {
+  id          String   @id @default(uuid())
+  name        String   
+  budget      Float    
+  status      String   @default("PENDING") 
+  passcode    String   
+  createdAt   DateTime @default(now())
+}

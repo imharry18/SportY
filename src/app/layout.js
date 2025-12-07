@@ -1,4 +1,5 @@
 import Navbar from "@/components/layout/Navbar";
+import { AuthProvider } from '@/context/AuthContext';
 import "./globals.css";
 
 export const metadata = {
@@ -16,6 +17,10 @@ export default function RootLayout({ children }) {
         <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;800&family=Rajdhani:wght@500;600;700;800&display=swap" rel="stylesheet" />
       </head>
       <body className="bg-dark-bg text-white font-sans antialiased selection:bg-brand/30 min-h-screen flex flex-col">
+        <AuthProvider>
+          {children}
+        </AuthProvider>
+
         {/* 1. Global Ambient Background */}
         <div className="fixed inset-0 pointer-events-none z-0">
             <div className="absolute inset-0 bg-grid-pattern opacity-20 mask-image-gradient"></div>
