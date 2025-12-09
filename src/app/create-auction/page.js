@@ -2,59 +2,74 @@
 import { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { useAuth } from '@/context/AuthContext';
-import { Copy, CheckCircle, ArrowRight, Zap, Upload } from 'lucide-react';
+import { Copy, CheckCircle, ArrowRight, Zap, Upload, X } from 'lucide-react';
+import Image from 'next/image';
 
 export default function CreateAuction() {
   const { user } = useAuth();
   const router = useRouter();
   
-  const [step, setStep] = useState(1); // 1 = Input, 2 = Success/Credentials
-  const [loading, setLoading] = useState(false); // Added loading state
-  const [formData, setFormData] = useState({ name: '', logo: null });
+  const [step, setStep] = useState(1);
+  const [loading, setLoading] = useState(false);
+  
+  // Updated State to hold the file and the preview URL
+  const [formData, setFormData] = useState({ name: '', logoFile: null, logoPreview: null });
+  
   const [generatedCreds, setGeneratedCreds] = useState({ leagueId: '', passcode: '' });
   const [copied, setCopied] = useState(false);
 
-  // 1. Auth Protection
   useEffect(() => {
     if (!user) router.push('/login');
   }, [user, router]);
 
-  // Helper: Generate Random String
   const generateRandomString = (length) => {
     const chars = 'ABCDEFGHIJKLMNOPQRSTUVWXYZ';
     let result = '';
-    for (let i = 0; i < length; i++) {
-      result += chars.charAt(Math.floor(Math.random() * chars.length));
-    }
+    for (let i = 0; i < length; i++) result += chars.charAt(Math.floor(Math.random() * chars.length));
     return result;
   };
 
-  // Helper: Generate League ID (ABC-DEF-GHIJ)
   const generateLeagueId = () => {
-    const part1 = generateRandomString(3);
-    const part2 = generateRandomString(3);
-    const part3 = generateRandomString(4);
-    return `${part1}-${part2}-${part3}`;
+    const p1 = generateRandomString(3);
+    const p2 = generateRandomString(3);
+    const p3 = generateRandomString(4);
+    return `${p1}-${p2}-${p3}`;
   };
 
-  // 2. Handle Creation (Updated to Save to DB)
+  // --- NEW: Handle Image Selection ---
+  const handleImageChange = (e) => {
+    const file = e.target.files[0];
+    if (file) {
+        // Create a fake local URL to show the image immediately
+        const previewUrl = URL.createObjectURL(file);
+        setFormData({ ...formData, logoFile: file, logoPreview: previewUrl });
+    }
+  };
+
+  // --- NEW: Remove Image ---
+  const removeImage = (e) => {
+    e.preventDefault(); // Prevent triggering the label click
+    setFormData({ ...formData, logoFile: null, logoPreview: null });
+  };
+
   const handleCreate = async (e) => {
     e.preventDefault();
-    setLoading(true); // Start loading
+    setLoading(true);
     
-    // Generate IDs locally
     const newLeagueId = generateLeagueId();
     const newPasscode = generateRandomString(10); 
     
     try {
-        // CALL THE API TO SAVE TO DATABASE
+        // NOTE: Currently we only send text data. 
+        // To save the image, you would need to upload 'formData.logoFile' to a cloud storage (like AWS S3 or Vercel Blob) 
+        // and then send the returned URL here.
         const res = await fetch('/api/auction/create', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
             body: JSON.stringify({
-                id: newLeagueId,        // Send the generated ID
+                id: newLeagueId,       
                 name: formData.name,
-                passcode: newPasscode   // Send the generated Passcode
+                passcode: newPasscode
             }),
         });
 
@@ -81,12 +96,11 @@ export default function CreateAuction() {
     setTimeout(() => setCopied(false), 2000);
   };
 
-  if (!user) return null; 
+  if (!user) return null;
 
   return (
     <div className="min-h-screen w-full bg-[#050505] flex items-center justify-center relative overflow-hidden py-12 px-6">
       
-      {/* --- BACKGROUND FX --- */}
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none"></div>
       <div className="absolute top-[-20%] left-[-10%] w-[600px] h-[600px] bg-brand/10 blur-[150px] rounded-full pointer-events-none mix-blend-screen"></div>
       <div className="absolute bottom-[-20%] right-[-10%] w-[600px] h-[600px] bg-cyan-900/10 blur-[150px] rounded-full pointer-events-none mix-blend-screen"></div>
@@ -94,11 +108,9 @@ export default function CreateAuction() {
 
       <div className="max-w-lg w-full relative z-10">
         
-        {/* --- STEP 1: INPUT DETAILS --- */}
         {step === 1 && (
           <div className="bg-[#0a0a0a] border border-white/10 rounded-3xl p-8 md:p-10 relative overflow-hidden shadow-2xl animate-in fade-in slide-in-from-bottom-8 duration-700">
             
-            {/* Header */}
             <div className="relative z-10 mb-8 text-center">
                <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full border border-white/10 bg-white/5 mb-5 backdrop-blur-md">
                   <span className="w-1.5 h-1.5 rounded-full bg-brand animate-pulse"></span>
@@ -114,7 +126,6 @@ export default function CreateAuction() {
 
             <form onSubmit={handleCreate} className="space-y-6 relative z-10">
               
-              {/* Input Group */}
               <div className="space-y-1.5 group/input">
                 <label className="text-[10px] font-bold text-brand uppercase tracking-[0.2em] ml-1 group-focus-within/input:text-brand-glow transition-colors">Tournament Name</label>
                 <div className="relative">
@@ -132,29 +143,60 @@ export default function CreateAuction() {
                 </div>
               </div>
 
-              {/* Upload Group */}
+              {/* --- UPDATED UPLOAD SECTION --- */}
               <div className="space-y-1.5">
                 <label className="text-[10px] font-bold text-brand uppercase tracking-[0.2em] ml-1">League Identity</label>
-                <label className="relative flex flex-col items-center justify-center w-full h-28 border border-dashed border-white/10 rounded-xl cursor-pointer hover:border-brand/30 hover:bg-white/[0.02] transition-all group/upload overflow-hidden">
-                  <div className="absolute inset-0 bg-brand/5 scale-0 group-hover/upload:scale-100 transition-transform duration-500 rounded-xl origin-center"></div>
-                  <div className="relative z-10 flex flex-col items-center justify-center pt-2 pb-3">
-                      <Upload className="w-6 h-6 text-white/20 mb-2 group-hover/upload:text-brand transition-colors transform group-hover/upload:-translate-y-1" />
-                      <p className="text-[10px] text-white/30 uppercase tracking-widest group-hover/upload:text-white transition-colors">Upload Emblem</p>
-                  </div>
-                  <input type="file" className="hidden" />
+                
+                <label className="relative flex flex-col items-center justify-center w-full h-28 border border-dashed border-white/10 rounded-xl cursor-pointer hover:border-brand/30 hover:bg-white/[0.02] transition-all group/upload overflow-hidden bg-[#050505]">
+                  
+                  {/* PREVIEW LOGIC */}
+                  {formData.logoPreview ? (
+                    <div className="absolute inset-0 z-20 flex items-center justify-center bg-[#050505]">
+                        <div className="relative w-full h-full p-2">
+                            <Image 
+                                src={formData.logoPreview} 
+                                alt="Preview" 
+                                fill 
+                                className="object-contain opacity-80"
+                            />
+                        </div>
+                        {/* Remove Button */}
+                        <button 
+                            onClick={removeImage}
+                            className="absolute top-2 right-2 p-1 bg-black/50 hover:bg-red-500/80 rounded-full text-white transition-colors backdrop-blur-md"
+                        >
+                            <X className="w-4 h-4" />
+                        </button>
+                    </div>
+                  ) : (
+                    <>
+                        <div className="absolute inset-0 bg-brand/5 scale-0 group-hover/upload:scale-100 transition-transform duration-500 rounded-xl origin-center"></div>
+                        <div className="relative z-10 flex flex-col items-center justify-center pt-2 pb-3">
+                            <Upload className="w-6 h-6 text-white/20 mb-2 group-hover/upload:text-brand transition-colors transform group-hover/upload:-translate-y-1" />
+                            <p className="text-[10px] text-white/30 uppercase tracking-widest group-hover/upload:text-white transition-colors">Click to Upload Emblem</p>
+                        </div>
+                    </>
+                  )}
+                  
+                  {/* FILE INPUT */}
+                  <input 
+                    type="file" 
+                    className="hidden" 
+                    accept="image/*"
+                    onChange={handleImageChange}
+                  />
                 </label>
               </div>
 
-              {/* Action Button */}
               <button 
                 type="submit" 
-                disabled={loading} // Disable while saving
+                disabled={loading} 
                 className="w-full group/btn relative px-6 py-4 bg-white text-black cut-corners-sm overflow-hidden transition-all hover:scale-[1.02] active:scale-[0.98] shadow-[0_0_40px_rgba(255,255,255,0.1)] hover:shadow-[0_0_60px_rgba(230,46,46,0.4)] mt-2 disabled:opacity-50"
               >
                   <div className="absolute inset-0 bg-brand translate-y-full group-hover/btn:translate-y-0 transition-transform duration-300 ease-out"></div>
                   <div className="relative z-10 flex items-center justify-center gap-3">
                       <span className="font-tech font-bold text-lg uppercase tracking-widest group-hover/btn:text-white transition-colors">
-                        {loading ? 'Saving to Database...' : 'Generate System'}
+                        {loading ? 'Saving...' : 'Generate System'}
                       </span>
                       {!loading && <ArrowRight className="w-5 h-5 group-hover/btn:text-white group-hover/btn:translate-x-1 transition-all" />}
                   </div>
@@ -164,11 +206,9 @@ export default function CreateAuction() {
           </div>
         )}
 
-        {/* --- STEP 2: SUCCESS & CREDENTIALS --- */}
+        {/* --- STEP 2: SUCCESS --- */}
         {step === 2 && (
           <div className="bg-[#0a0a0a] border border-green-500/30 rounded-3xl p-8 md:p-10 relative overflow-hidden animate-in zoom-in-95 duration-500 shadow-[0_0_100px_rgba(34,197,94,0.1)]">
-            
-            {/* Decoration */}
             <div className="absolute top-0 right-0 w-[300px] h-[300px] bg-green-500/5 blur-[100px] rounded-full pointer-events-none"></div>
             <div className="absolute top-6 right-6">
                 <div className="w-2 h-2 bg-green-500 rounded-full animate-ping"></div>
@@ -182,12 +222,10 @@ export default function CreateAuction() {
                 <p className="text-[10px] font-mono text-green-400 mt-2 uppercase tracking-widest border border-green-500/20 px-3 py-1 rounded bg-green-900/10">Credentials Generated Successfully</p>
             </div>
 
-            {/* Credentials Card */}
             <div className="bg-[#050505] border border-white/10 rounded-xl p-1 relative group/card mb-6 overflow-hidden">
                 <div className="absolute inset-0 bg-grid-pattern opacity-[0.05]"></div>
                 <div className="bg-[#080808] p-5 rounded-lg relative z-10">
                     <div className="grid grid-cols-1 gap-6 relative">
-                        {/* League ID */}
                         <div className="space-y-1">
                             <div className="text-[9px] text-white/30 uppercase tracking-widest font-bold flex items-center gap-2">
                                 <span className="w-1 h-1 bg-brand rounded-full"></span> League ID
@@ -197,7 +235,6 @@ export default function CreateAuction() {
                         
                         <div className="h-px w-full bg-white/5"></div>
 
-                        {/* Passcode */}
                         <div className="space-y-1">
                             <div className="text-[9px] text-white/30 uppercase tracking-widest font-bold flex items-center gap-2">
                                 <span className="w-1 h-1 bg-brand rounded-full"></span> Passcode
@@ -209,7 +246,6 @@ export default function CreateAuction() {
                     </div>
                 </div>
                 
-                {/* Copy Button */}
                 <button 
                     onClick={copyToClipboard}
                     className="absolute top-4 right-4 p-2 bg-white/5 border border-white/10 hover:bg-white/10 rounded-lg transition-colors group/copy z-20"
@@ -221,7 +257,6 @@ export default function CreateAuction() {
 
             <div className="flex flex-col gap-4 relative z-10">
                 <p className="text-center text-[10px] text-white/30 uppercase tracking-widest">Share these credentials securely with your franchise owners.</p>
-                
                 <button 
                     onClick={() => router.push(`/setup-auction?id=${generatedCreds.leagueId}&key=${generatedCreds.passcode}`)}
                     className="w-full group/next relative px-6 py-4 bg-brand text-white cut-corners-sm overflow-hidden transition-all hover:bg-brand-glow shadow-[0_0_30px_rgba(230,46,46,0.3)]"
