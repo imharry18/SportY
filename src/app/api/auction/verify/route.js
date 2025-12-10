@@ -16,13 +16,21 @@ export async function POST(request) {
       return NextResponse.json({ success: false, message: "League ID not found." }, { status: 404 });
     }
 
-    // --- LOGIC FOR SETUP (The only role allowed when PENDING) ---
+    // --- LOGIC FOR SETUP & EDIT (The only roles allowed when PENDING) ---
     if (role === 'SETUP' || role === 'EDIT') {
       if (auction.passcode !== passcode) {
         return NextResponse.json({ success: false, message: "Invalid Admin Passcode." }, { status: 401 });
       }
-      // Setup is always allowed, redirects to setup page
-      return NextResponse.json({ success: true, redirect: `/setup-auction?id=${leagueId}&key=${passcode}` });
+
+      // Determine destination based on role intent
+      // SETUP -> Go to the wizard to initialize
+      // EDIT  -> Go to the advanced dashboard to modify
+      const targetPage = role === 'EDIT' ? '/modify-auction' : '/setup-auction';
+
+      return NextResponse.json({ 
+        success: true, 
+        redirect: `${targetPage}?id=${leagueId}&key=${passcode}` 
+      });
     }
 
     // --- LOGIC FOR ADMIN (Must be setup first) ---
