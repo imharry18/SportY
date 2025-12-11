@@ -15,9 +15,9 @@ export default function JoinAuction() {
     setLoading(true);
     setError('');
 
-    // Determine Role for API
-    let apiRole = activeModal;
-    if (activeModal === 'EDIT') apiRole = 'SETUP'; // Edit uses same perm as Setup usually
+    // --- FIX: We now send the exact role ('EDIT' or 'SETUP') ---
+    // Previously: if (activeModal === 'EDIT') apiRole = 'SETUP'; (REMOVED THIS)
+    const apiRole = activeModal; 
 
     try {
       const res = await fetch('/api/auction/verify', {
@@ -26,7 +26,7 @@ export default function JoinAuction() {
         body: JSON.stringify({
             leagueId: form.leagueId,
             passcode: form.passcode,
-            role: apiRole
+            role: apiRole // Sends 'EDIT' correctly now
         }),
       });
 
@@ -38,6 +38,7 @@ export default function JoinAuction() {
         setError(data.message);
       }
     } catch (err) {
+      console.error(err);
       setError("Connection failed.");
     } finally {
       setLoading(false);
