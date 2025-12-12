@@ -23,7 +23,7 @@ export async function GET(request) {
         tagline: auction.theme || "", 
         logoUrl: auction.logoUrl, 
         purse: auction.budget,
-        // FIX: Read actual values from DB, fallback to defaults only if null
+        // Read actual values from DB
         bidIncrement: auction.bidIncrement || 'Dynamic',
         ground: auction.ground || '',
         
@@ -36,10 +36,14 @@ export async function GET(request) {
         players: auction.players.map(p => ({
             id: p.id,
             name: p.name,
-            // Handle DB field mapping
             role: p.category, 
             price: p.basePrice,
-            image: '' // Add p.image here if you add image column to Prisma
+            // --- NEW FIELDS FOR DASHBOARD ---
+            isSold: p.isSold,       // Needed to show purchase status
+            soldPrice: p.soldPrice, // Needed for Total Spent calc
+            teamId: p.teamId,       // Needed to filter "My Squad"
+            // --------------------------------
+            image: '' 
         }))
     };
 

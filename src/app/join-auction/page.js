@@ -5,7 +5,7 @@ import { Shield, Users, Eye, Settings, Edit, ArrowRight, X, Lock, Zap, Terminal 
 
 export default function JoinAuction() {
   const router = useRouter();
-  const [activeModal, setActiveModal] = useState(null); // 'ADMIN', 'TEAM', 'SETUP', 'EDIT'
+  const [activeModal, setActiveModal] = useState(null); 
   const [form, setForm] = useState({ leagueId: '', passcode: '' });
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
@@ -15,8 +15,6 @@ export default function JoinAuction() {
     setLoading(true);
     setError('');
 
-    // --- FIX: We now send the exact role ('EDIT' or 'SETUP') ---
-    // Previously: if (activeModal === 'EDIT') apiRole = 'SETUP'; (REMOVED THIS)
     const apiRole = activeModal; 
 
     try {
@@ -26,13 +24,17 @@ export default function JoinAuction() {
         body: JSON.stringify({
             leagueId: form.leagueId,
             passcode: form.passcode,
-            role: apiRole // Sends 'EDIT' correctly now
+            role: apiRole 
         }),
       });
 
       const data = await res.json();
 
       if (res.ok) {
+        // SAVE TEAM SESSION IF LOGGING IN AS TEAM
+        if (activeModal === 'TEAM' && data.teamData) {
+            localStorage.setItem('sporty_team_session', JSON.stringify(data.teamData));
+        }
         router.push(data.redirect);
       } else {
         setError(data.message);
@@ -51,16 +53,16 @@ export default function JoinAuction() {
     setForm({ leagueId: '', passcode: '' });
   }
 
+  // ... (REST OF THE COMPONENT REMAINS EXACTLY THE SAME, NO CHANGES BELOW)
   return (
     <div className="min-h-[calc(100vh-5rem)] w-full bg-[#050505] flex flex-col items-center justify-center py-12 px-6 relative overflow-hidden">
-      
-      {/* --- BACKGROUND FX --- */}
+      {/* BACKGROUND FX */}
       <div className="absolute inset-0 bg-[url('https://grainy-gradients.vercel.app/noise.svg')] opacity-[0.03] pointer-events-none"></div>
       <div className="absolute top-[-20%] right-[-10%] w-[600px] h-[600px] bg-brand/5 blur-[150px] rounded-full pointer-events-none mix-blend-screen"></div>
       <div className="absolute bottom-[-20%] left-[-10%] w-[600px] h-[600px] bg-blue-900/10 blur-[150px] rounded-full pointer-events-none mix-blend-screen"></div>
       <div className="absolute inset-0 bg-grid-pattern opacity-[0.02] pointer-events-none animate-pulse"></div>
 
-      {/* --- CONTENT CONTAINER --- */}
+      {/* CONTENT CONTAINER */}
       <div className="max-w-5xl w-full relative z-10 flex flex-col items-center">
 
         {/* HEADER */}
@@ -77,10 +79,10 @@ export default function JoinAuction() {
             </p>
         </div>
 
-        {/* --- MAIN GRID --- */}
+        {/* MAIN GRID */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-6 w-full mb-12">
             
-            {/* LEFT: ADMIN TOOLS (4 Cols) */}
+            {/* LEFT: ADMIN TOOLS */}
             <div className="lg:col-span-4 flex flex-col gap-4 animate-in slide-in-from-left-4 duration-700 delay-100">
                 <p className="text-[10px] font-bold text-brand uppercase tracking-widest mb-1 pl-1">Configuration</p>
                 
@@ -121,7 +123,7 @@ export default function JoinAuction() {
                 </button>
             </div>
 
-            {/* RIGHT: JOIN ROLES (8 Cols) */}
+            {/* RIGHT: JOIN ROLES */}
             <div className="lg:col-span-8 flex flex-col gap-4 animate-in slide-in-from-right-4 duration-700 delay-200">
                 <p className="text-[10px] font-bold text-white/30 uppercase tracking-widest mb-1 pl-1">Login Protocols</p>
                 <div className="grid grid-cols-1 md:grid-cols-3 gap-4 h-full">
@@ -159,7 +161,7 @@ export default function JoinAuction() {
 
       </div>
 
-      {/* --- UNIVERSAL LOGIN MODAL --- */}
+      {/* UNIVERSAL LOGIN MODAL */}
       {activeModal && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-6 bg-black/80 backdrop-blur-sm animate-in fade-in duration-300">
             <div 
@@ -250,7 +252,6 @@ export default function JoinAuction() {
   );
 }
 
-// Sub-Component for Role Cards
 function RoleCard({ icon: Icon, title, color, borderColor, bgHover, desc, onClick }) {
     return (
         <button 
