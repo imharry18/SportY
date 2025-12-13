@@ -67,20 +67,24 @@ model Player {
 }
 
 model Auction {
-  id          String   @id @default(uuid())
-  name        String
-  // NEW: Add this field
-  logoUrl     String?  
-  budget      Float
-  status      String   @default("PENDING")
-  passcode    String
-  theme       String?
-  eventDate   DateTime?
+  id           String   @id @default(uuid())
+  name         String
+  logoUrl      String?
+  budget       Float
+  status       String   @default("PENDING")
+  passcode     String
+  theme        String?
+  eventDate    DateTime?
   
-  teams       Team[]
-  players     Player[]
+  // --- NEW FIELDS ---
+  ground       String?
+  bidIncrement String?  @default("Dynamic")
+  // ------------------
+
+  teams        Team[]
+  players      Player[]
   
-  createdAt   DateTime @default(now())
+  createdAt    DateTime @default(now())
 }
 
 // ... User and Team models remain the same

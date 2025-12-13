@@ -20,12 +20,13 @@ export async function GET(request) {
 
     const formattedData = {
         name: auction.name,
-        tagline: auction.theme || "Tournament", 
-        // NEW: Send the real logoUrl from the database
+        tagline: auction.theme || "", 
         logoUrl: auction.logoUrl, 
         purse: auction.budget,
-        bidIncrement: 'Dynamic',
-        ground: 'Main Ground',
+        // FIX: Read actual values from DB, fallback to defaults only if null
+        bidIncrement: auction.bidIncrement || 'Dynamic',
+        ground: auction.ground || '',
+        
         teams: auction.teams.map(t => ({
             id: t.id,
             name: t.name,
@@ -35,9 +36,10 @@ export async function GET(request) {
         players: auction.players.map(p => ({
             id: p.id,
             name: p.name,
-            role: p.category,
+            // Handle DB field mapping
+            role: p.category, 
             price: p.basePrice,
-            image: '' 
+            image: '' // Add p.image here if you add image column to Prisma
         }))
     };
 
