@@ -40,6 +40,9 @@ model Team {
   name          String
   purseBalance  Float    @default(50000000)
   logoUrl       String?
+  accessCode    String   @unique // NEW: Secret code for team login
+  auctionId     String?  // NEW: Link to auction
+  auction       Auction? @relation(fields: [auctionId], references: [id])
   owner         User[]
   players       Player[]
 }
@@ -56,10 +59,22 @@ model Player {
 }
 
 model Auction {
-  id          String   @id @default(uuid())
+  id          String   @id @default(uuid()) // This is the "League ID"
   name        String
   budget      Float
-  status      String   @default("PENDING")
-  passcode    String
+  status      String   @default("PENDING") // PENDING, SETUP, LIVE, COMPLETED
+  passcode    String   // Admin Passcode
+  
+  // NEW FIELDS
+  theme       String?
+  eventDate   DateTime?
+  teams       Team[]
+  
   createdAt   DateTime @default(now())
 }
+// ... existing User model ...
+
+
+
+// ... existing Player model ...
+
