@@ -14,17 +14,16 @@ model User {
   email         String   @unique
   password      String
   
-  // Make these OPTIONAL by adding '?'
   fullName      String?
   role          String   @default("PLAYER") 
   
-  // Cricketer Details (All Optional for now)
+  // Cricketer Details
   age           Int?
   playerRole    String?
   battingStyle  String?
   bowlingStyle  String?
-  
-  // Stats (Default to 0 is fine)
+
+  // Stats
   matches       Int      @default(0)
   runs          Int      @default(0)
   wickets       Int      @default(0)
@@ -34,53 +33,42 @@ model User {
   createdAt     DateTime @default(now())
 }
 
-// ... Keep Team, Player, and Auction models same as before
 model Team {
   id           String   @id @default(uuid())
   name         String
   purseBalance Float    @default(50000000)
   logoUrl      String?
   accessCode   String   @unique
-  
-  // --- NEW FIELD ---
-  themeColor   String?  @default("#E62E2E") // Default to Brand Red
-  // -----------------
+  themeColor   String?  @default("#E62E2E")
 
   auctionId    String?
   auction      Auction? @relation(fields: [auctionId], references: [id])
   owner        User[]
   players      Player[]
 }
-// prisma/schema.prisma
-
-// ... User & Team models ...
-
-
 
 model Auction {
-  id           String   @id @default(uuid())
-  name         String
-  logoUrl      String?
-  budget       Float
-  status       String   @default("PENDING")
-  passcode     String
-  theme        String?
-  ground       String?
-  bidIncrement String?  @default("Dynamic")
-  eventDate    DateTime?
-  fluxData     String?  @default("{}") 
+  id              String   @id @default(uuid())
+  name            String
+  logoUrl         String?
+  budget          Float
+  status          String   @default("PENDING")
+  passcode        String
+  theme           String?
+  ground          String?
+  bidIncrement    String?  @default("Dynamic")
+  eventDate       DateTime?
+  fluxData        String?  @default("{}") 
 
-  // --- NEW: LIVE AUCTION STATE ---
-  activePlayerId String? // The player currently on screen
-  currentBid     Float    @default(0)
+  // Live Auction State
+  activePlayerId  String?
+  currentBid      Float    @default(0)
   currentBidderId String?
-  // -------------------------------
 
-  teams        Team[]
-  players      Player[]
-  createdAt    DateTime @default(now())
+  teams           Team[]
+  players         Player[]
+  createdAt       DateTime @default(now())
 }
-// prisma/schema.prisma
 
 model Player {
   id            String   @id @default(uuid())
@@ -89,8 +77,6 @@ model Player {
   basePrice     Float
   soldPrice     Float?
   isSold        Boolean  @default(false)
-  
-  // NEW: Order for auction sequence
   order         Int      @default(0) 
 
   teamId        String?
@@ -98,11 +84,3 @@ model Player {
   auctionId     String?
   auction       Auction? @relation(fields: [auctionId], references: [id])
 }
-
-
-// ... User and Team models remain the same
-
-
-
-// ... existing Player model ...
-
