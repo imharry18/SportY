@@ -1,5 +1,6 @@
 'use client';
 import { useState } from 'react';
+import { usePathname } from 'next/navigation'; // 1. Import usePathname
 import Image from "next/image";
 import Link from "next/link";
 import { useAuth } from '@/context/AuthContext';
@@ -13,8 +14,15 @@ const NAV_LINKS = [
 ];
 
 export default function Navbar() {
+  const pathname = usePathname(); // 2. Get the current route
   const { user, logout } = useAuth();
   const [showProfileMenu, setShowProfileMenu] = useState(false);
+
+  // 3. HIDE NAVBAR LOGIC
+  // If we are on the blitz-draft page, render nothing (null)
+  if (pathname === '/blitz-draft') {
+    return null;
+  }
 
   return (
     <header className="sticky top-0 w-full z-50 bg-[#050505] border-b border-white/10 backdrop-blur-md bg-opacity-80">
